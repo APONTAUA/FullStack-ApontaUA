@@ -1,0 +1,32 @@
+﻿Nome,Versão resolvida,Tipo,Utilização,Licença,Fonte,Observações
+apontaua-backend,0.1.0,Projeto ApontaUA,Código fonte do backend; não é dependência de terceiros,Não declarada,pyproject.toml,A licença do código próprio ainda não foi escolhida
+annotated-doc,0.0.5,Transitiva runtime,Dependência resolvida por uv.lock,MIT,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,Metadados da distribuição (License-Expression/License)
+annotated-types,0.8.0,Transitiva runtime,Dependência resolvida por uv.lock,MIT,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,Metadados da distribuição (License-Expression/License)
+anyio,4.16.0,Transitiva runtime,Dependência resolvida por uv.lock,MIT,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,Metadados da distribuição (License-Expression/License)
+asyncpg,0.32.0,Direta runtime,Dependência declarada em pyproject.toml,Apache-2.0,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,Metadados da distribuição (License-Expression/License)
+click,8.5.1,Transitiva runtime,Dependência resolvida por uv.lock,BSD-3-Clause,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,Metadados da distribuição (License-Expression/License)
+fastapi,0.162.2,Direta runtime,Dependência declarada em pyproject.toml,MIT,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,Metadados da distribuição (License-Expression/License)
+greenlet,3.5.6,Transitiva runtime,Dependência resolvida por uv.lock,MIT AND PSF-2.0,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,Metadados da distribuição (License-Expression/License)
+h11,0.16.0,Transitiva runtime,Dependência resolvida por uv.lock,MIT,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,Metadados da distribuição (License-Expression/License)
+hatchling,1.33.0,Direta build,Build backend declarado em pyproject.toml e incluído no grupo build,MIT,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,Metadados da distribuição (License-Expression/License)
+httptools,0.9.0,Transitiva runtime,Dependência resolvida por uv.lock,MIT,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,Metadados da distribuição (License-Expression/License)
+idna,3.20,Transitiva runtime,Dependência resolvida por uv.lock,BSD-3-Clause,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,Metadados da distribuição (License-Expression/License)
+opentelemetry-api,1.45.2,Transitiva runtime,Dependência resolvida por uv.lock,Apache-2.0,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,Metadados da distribuição (License-Expression/License)
+packaging,26.3,Transitiva build,Dependência resolvida por uv.lock,Apache-2.0 OR BSD-2-Clause,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,"Metadados da distribuição (License-Expression/License); expressão alternativa, confirmar a opção de distribuição escolhida"
+pathspec,1.1.1,Transitiva build,Dependência resolvida por uv.lock,MPL-2.0,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,Ficheiro LICENSE da distribuição; classifier confirma MPL 2.0; rever obrigações por ficheiro em caso de modificação/redistribuição
+pluggy,1.7.0,Transitiva build,Dependência resolvida por uv.lock,MIT,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,Metadados da distribuição (License-Expression/License)
+pydantic,2.14.3,Transitiva runtime,Dependência resolvida por uv.lock,MIT,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,Metadados da distribuição (License-Expression/License)
+pydantic-core,2.50.4,Transitiva runtime,Dependência resolvida por uv.lock,MIT,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,Metadados da distribuição (License-Expression/License)
+pydantic-settings,2.16.2,Direta runtime,Dependência declarada em pyproject.toml,MIT,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,Metadados da distribuição (License-Expression/License)
+python-dotenv,1.2.4,Transitiva runtime,Dependência resolvida por uv.lock,BSD-3-Clause,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,Metadados da distribuição (License-Expression/License)
+pyyaml,6.0.3,Transitiva runtime,Dependência resolvida por uv.lock,MIT,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,Metadados da distribuição (License-Expression/License)
+sqlalchemy,2.1.8,Direta runtime,Dependência declarada em pyproject.toml,MIT,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,Metadados da distribuição (License-Expression/License)
+starlette,1.10.0,Transitiva runtime,Dependência resolvida por uv.lock,BSD-3-Clause,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,Metadados da distribuição (License-Expression/License)
+tomlkit,0.15.2,Transitiva build,Dependência resolvida por uv.lock,MIT,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,Metadados da distribuição (License-Expression/License)
+trove-classifiers,2026.9.21.13,Transitiva build,Dependência resolvida por uv.lock,Apache-2.0,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,Ficheiro LICENSE da distribuição; classifier confirma Apache Software License
+typing-extensions,4.16.0,Transitiva runtime,Dependência resolvida por uv.lock,PSF-2.0,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,Metadados da distribuição (License-Expression/License)
+typing-inspection,0.4.5,Transitiva runtime,Dependência resolvida por uv.lock,MIT,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,Metadados da distribuição (License-Expression/License)
+uvicorn,0.54.0,Direta runtime,Dependência declarada em pyproject.toml,BSD-3-Clause,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,Metadados da distribuição (License-Expression/License)
+uvloop,0.23.0,Transitiva runtime,Dependência resolvida por uv.lock,MIT License,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,Metadados da distribuição (License-Expression/License)
+watchfiles,1.3.0,Transitiva runtime,Dependência resolvida por uv.lock,MIT,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,Metadados da distribuição (License-Expression/License)
+websockets,17.4,Transitiva runtime,Dependência resolvida por uv.lock,BSD-3-Clause,uv.lock e metadados/ficheiros LICENSE da distribuição instalada,Metadados da distribuição (License-Expression/License)
