@@ -16,6 +16,6 @@ async def readiness() -> dict[str, str]:
     try:
         async with engine.connect() as connection:
             await connection.execute(text("SELECT 1"))
-    except Exception as exc:
-        raise HTTPException(status_code=503, detail="database unavailable") from exc
+    except Exception:
+        raise HTTPException(status_code=503, detail="database unavailable") from None
     return {"status": "ok", "database": "ok"}
