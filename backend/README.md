@@ -9,7 +9,8 @@ as suas rotas, modelos e regras de negócio no respetivo pacote dentro de
 1. Copiar `.env.example` para `.env` e ajustar os valores locais.
 2. Sincronizar as versões bloqueadas: `uv sync --locked --group build`.
 3. Iniciar PostgreSQL (por exemplo, `docker compose up -d db`).
-4. Iniciar a API: `uvicorn backend.app.main:app --reload`.
+4. Criar ou atualizar as tabelas: `uv run alembic upgrade head`.
+5. Iniciar a API: `uvicorn backend.app.main:app --reload`.
 
 OpenAPI fica disponível em `/api/v1/docs`. Os endpoints de estado são
 `/api/v1/health/live` e `/api/v1/health/ready`.
@@ -17,6 +18,28 @@ OpenAPI fica disponível em `/api/v1/docs`. Os endpoints de estado são
 `uv.lock` fixa as dependências runtime e a ferramenta de build. Alterações aos
 intervalos declarados em `pyproject.toml` exigem revisão e regeneração do lock
 com `uv lock`; não editar `uv.lock` manualmente.
+
+## Migrações
+
+As tabelas são criadas com Alembic (`backend/migrations/`). O URL da base de dados
+vem das mesmas variáveis de ambiente da API; `alembic.ini` não guarda credenciais.
+
+- Aplicar migrações: `uv run alembic upgrade head`.
+- Criar uma migração depois de alterar modelos: `uv run alembic revision --autogenerate -m "descricao"`,
+  rever o ficheiro gerado e importar o módulo novo em `backend/migrations/env.py`.
+- Confirmar que os modelos e as migrações coincidem: `uv run alembic check`.
+
+## Testes
+
+`uv run --group test pytest` corre os testes com SQLite em memória, sem precisar de PostgreSQL.
+
+## Permissões provisórias
+
+Enquanto a autenticação institucional (EPIC-01) e os papéis (EPIC-02) não existem,
+as rotas protegidas leem o papel do cabeçalho `X-Dev-Role` (por exemplo,
+`X-Dev-Role: administrador`). Isto só funciona com `APP_ENV` igual a `development`
+ou `test`; nos restantes ambientes, as rotas protegidas devolvem 401. A lógica está em
+`backend/app/core/permissions.py` e deve ser substituída quando a autenticação existir.
 
 ## Persistência e integrações
 
