@@ -11,6 +11,10 @@ as suas rotas, modelos e regras de negócio no respetivo pacote dentro de
 3. Iniciar PostgreSQL (por exemplo, `docker compose up -d db`).
 4. Iniciar a API: `uvicorn backend.app.main:app --reload`.
 
+Para iniciar a stack integrada com Docker Compose, incluindo frontend, API,
+PostgreSQL e NGINX, consulte
+[`docs/development/containerized-environment.md`](../docs/development/containerized-environment.md).
+
 OpenAPI fica disponível em `/api/v1/docs`. Os endpoints de estado são
 `/api/v1/health/live` e `/api/v1/health/ready`.
 
@@ -25,6 +29,6 @@ persistente definido por `FILE_STORAGE_PATH`; a base de dados deverá guardar
 metadados e referências. As credenciais OIDC e SMTP são apenas pontos de
 configuração: os parâmetros reais dependem da confirmação institucional.
 
-O `compose.yaml` é um perfil de desenvolvimento local. Substituir credenciais,
-definir segredos fora do repositório e configurar volumes/backups antes de
-qualquer implantação partilhada ou de produção.
+O `compose.yaml` é um ambiente de desenvolvimento local. Substituir credenciais,
+definir segredos fora do repositório e configurar TLS, volumes e backups antes
+de qualquer implantação partilhada ou de produção.

@@ -1,0 +1,14 @@
+.git/
+.venv/
+__pycache__/
+*.py[cod]
+.ruff_cache/
+.pytest_cache/
+.env
+.env.*
+package-lock.json
+var/
+postgres_data/
+uploaded_files/
+frontend/node_modules/
+frontend/dist/
