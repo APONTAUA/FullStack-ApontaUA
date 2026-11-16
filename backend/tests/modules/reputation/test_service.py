@@ -45,3 +45,11 @@ def test_criterio_acima_de_cem_e_rejeitado():
         calcular_reputacao(
             qualidade=150, utilidade=0, colaboracao=0, melhoria_continua=0, fiabilidade=0
         )
+
+
+def test_criterio_negativo_e_rejeitado():
+    """Um critério abaixo de 0 também está fora da escala."""
+    with pytest.raises(ValueError):
+        calcular_reputacao(
+            qualidade=50, utilidade=-5, colaboracao=0, melhoria_continua=0, fiabilidade=0
+        )
