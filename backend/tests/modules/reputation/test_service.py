@@ -1,6 +1,13 @@
 import pytest
 
-from backend.app.modules.reputation.service import calcular_reputacao
+from backend.app.modules.reputation.service import (
+    calcular_colaboracao,
+    calcular_fiabilidade,
+    calcular_melhoria_continua,
+    calcular_qualidade,
+    calcular_reputacao,
+    calcular_utilidade,
+)
 
 
 def test_todos_os_criterios_a_zero_devolve_zero():
@@ -53,3 +60,97 @@ def test_criterio_negativo_e_rejeitado():
         calcular_reputacao(
             qualidade=50, utilidade=-5, colaboracao=0, melhoria_continua=0, fiabilidade=0
         )
+
+
+@pytest.mark.parametrize(
+    ("media", "avaliacoes", "esperado"),
+    [
+        (0, 0, 50),  # sem avaliações: fica na média de partida
+        (5, 1, 54.545),  # uma avaliação quase não desloca
+        (1, 1, 45.455),  # um voto mau isolado também não
+        (3, 10, 50),  # média a meio da escala
+        (5, 10, 75),  # boa média, confiança parcial
+        (1, 10, 25),
+        (4.6, 50, 83.333),  # muitas avaliações: aproxima-se da média real
+    ],
+)
+def test_qualidade_segue_a_media_bayesiana(media, avaliacoes, esperado):
+    """A qualidade considera a média e a quantidade de avaliações (RN-102)."""
+    assert calcular_qualidade(media, avaliacoes) == pytest.approx(esperado, abs=0.001)
+
+
+def test_qualidade_rejeita_media_fora_da_escala():
+    """Com avaliações, a média tem de estar entre 1 e 5 estrelas."""
+    with pytest.raises(ValueError):
+        calcular_qualidade(6, 10)
+
+
+def test_qualidade_rejeita_numero_negativo_de_avaliacoes():
+    """Não existe um número negativo de avaliações."""
+    with pytest.raises(ValueError):
+        calcular_qualidade(4, -1)
+
+
+@pytest.mark.parametrize(
+    ("consultas", "downloads", "esperado"),
+    [(0, 0, 0), (40, 20, 60), (100, 0, 100), (200, 300, 100)],
+)
+def test_utilidade_sobe_ate_a_referencia(consultas, downloads, esperado):
+    """A utilidade considera consultas e downloads válidos (RN-103)."""
+    assert calcular_utilidade(consultas, downloads) == pytest.approx(esperado)
+
+
+@pytest.mark.parametrize(
+    ("comentarios", "sugestoes", "esperado"),
+    [(0, 0, 0), (3, 1, 20), (10, 10, 100), (50, 0, 100)],
+)
+def test_colaboracao_sobe_ate_a_referencia(comentarios, sugestoes, esperado):
+    """A colaboração considera comentários e sugestões úteis (RN-104)."""
+    assert calcular_colaboracao(comentarios, sugestoes) == pytest.approx(esperado)
+
+
+@pytest.mark.parametrize(("sugestoes", "esperado"), [(0, 0), (2, 20), (10, 100), (25, 100)])
+def test_melhoria_continua_sobe_ate_a_referencia(sugestoes, esperado):
+    """A melhoria contínua considera sugestões aceites e incorporadas (RN-105)."""
+    assert calcular_melhoria_continua(sugestoes) == pytest.approx(esperado)
+
+
+def test_contagens_negativas_sao_rejeitadas():
+    """Nenhum critério aceita contagens negativas."""
+    with pytest.raises(ValueError):
+        calcular_utilidade(-1, 0)
+    with pytest.raises(ValueError):
+        calcular_colaboracao(0, -1)
+    with pytest.raises(ValueError):
+        calcular_melhoria_continua(-1)
+
+
+@pytest.mark.parametrize(("infracoes", "esperado"), [(0, 100), (1, 75), (4, 0), (6, 0)])
+def test_fiabilidade_desce_por_infracao_confirmada(infracoes, esperado):
+    """A fiabilidade considera as infrações confirmadas (RN-106)."""
+    assert calcular_fiabilidade(infracoes) == pytest.approx(esperado)
+
+
+def test_fiabilidade_rejeita_numero_negativo_de_infracoes():
+    """Não existe um número negativo de infrações."""
+    with pytest.raises(ValueError):
+        calcular_fiabilidade(-1)
+
+
+def test_exemplo_completo_do_historial_a_reputacao():
+    """Do historial de um utilizador à reputação global, passando pelos cinco critérios."""
+    qualidade = calcular_qualidade(media_avaliacoes=4.5, numero_avaliacoes=8)
+    utilidade = calcular_utilidade(consultas_validas=40, downloads_validos=20)
+    colaboracao = calcular_colaboracao(comentarios_uteis=3, sugestoes_uteis=1)
+    melhoria_continua = calcular_melhoria_continua(sugestoes_incorporadas=2)
+    fiabilidade = calcular_fiabilidade(infracoes_confirmadas=0)
+
+    reputacao = calcular_reputacao(
+        qualidade=qualidade,
+        utilidade=utilidade,
+        colaboracao=colaboracao,
+        melhoria_continua=melhoria_continua,
+        fiabilidade=fiabilidade,
+    )
+
+    assert reputacao == pytest.approx(54)
