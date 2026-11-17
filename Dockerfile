@@ -9,7 +9,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 COPY --from=uv-bin /uv /uvx /bin/
 
 WORKDIR /app
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock alembic.ini ./
 RUN uv sync --locked --no-dev --no-install-project
 RUN groupadd --system --gid 10001 apontaua \
     && useradd --system --uid 10001 --gid 10001 --home-dir /home/apontaua --create-home apontaua \

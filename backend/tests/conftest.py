@@ -54,6 +54,8 @@ async def client(session_factory: async_sessionmaker[AsyncSession]) -> AsyncIter
 
     app.dependency_overrides[get_db_session] = override_session
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://localhost") as http_client:
-        yield http_client
-    app.dependency_overrides.clear()
+    try:
+        async with AsyncClient(transport=transport, base_url="http://localhost") as http_client:
+            yield http_client
+    finally:
+        app.dependency_overrides.clear()
