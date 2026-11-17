@@ -23,7 +23,7 @@ FRONTEND_USAGE = {
     "typescript": "Verificação de tipos TypeScript",
     "vite": "Servidor de desenvolvimento e build",
 }
-BACKEND_RUNTIME = {"alembic", "asyncpg", "fastapi", "pydantic-settings", "sqlalchemy", "uvicorn"}
+BACKEND_RUNTIME = {"alembic", "asyncpg", "fastapi", "minio", "pydantic-settings", "sqlalchemy", "uvicorn"}
 BACKEND_TEST = {"aiosqlite", "httpx", "pytest", "pytest-asyncio"}
 BACKEND_BUILD_TRANSITIVE = {"packaging", "pathspec", "pluggy", "tomlkit", "trove-classifiers"}
 
@@ -34,7 +34,7 @@ def canonical_name(name: str) -> str:
 
 def write_csv(path: Path, rows: list[dict[str, str]]) -> None:
     with path.open("w", encoding="utf-8-sig", newline="") as stream:
-        writer = csv.DictWriter(stream, fieldnames=FIELDS)
+        writer = csv.DictWriter(stream, fieldnames=FIELDS, lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
 

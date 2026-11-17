@@ -17,12 +17,11 @@ class Curso(Base):
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     codigo: Mapped[str] = mapped_column(String(CODIGO_MAX_LENGTH), unique=True)
     nome: Mapped[str] = mapped_column(String(NOME_MAX_LENGTH))
-
     unidades_curriculares: Mapped[list["UnidadeCurricular"]] = relationship(
         back_populates="curso"
     )
 
-   
+
 
 class UnidadeCurricular(Base):
     """Unidade curricular da UA (RF-016, RF-017, US-016)."""
@@ -31,7 +30,7 @@ class UnidadeCurricular(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     codigo: Mapped[str] = mapped_column(String(CODIGO_MAX_LENGTH), unique=True, nullable=False)
-    nome: Mapped[str] = mapped_column(String(NOME_MAX_LENGTH), nullable=False)
+    nome: Mapped[str] = mapped_column(String(NOME_MAX_LENGTH), nullable= False)
 
     curso_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid,
@@ -39,4 +38,8 @@ class UnidadeCurricular(Base):
         nullable=True,
     )
 
-    curso: Mapped["Curso | None"] = relationship(back_populates="unidades_curriculares")
+    curso: Mapped["Curso | None"] = relationship(
+        back_populates="unidades_curriculares"
+    )
+
+

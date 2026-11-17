@@ -2,7 +2,7 @@
 """Adiciona a associação entre unidades curriculares e cursos (US-017).
 
 Revision ID: 19eb6f032775
-Revises: 0002_create_unidade_curricular
+Revises: 0003_create_unidade_curricular
 """
 
 from collections.abc import Sequence
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "19eb6f032775"
-down_revision: str | None = "0002_create_unidade_curricular"
+down_revision: str | None = "0003_create_unidade_curricular"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
