@@ -45,8 +45,8 @@ class UnidadeCurricularCreate(BaseModel):
 class UnidadeCurricularUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    codigo: Codigo | None = None
-    nome: Nome | None = None
+    codigo: Codigo = None
+    nome: Nome = None
 
 
 class UnidadeCurricularRead(BaseModel):
