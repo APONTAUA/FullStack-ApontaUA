@@ -135,9 +135,13 @@ async def criar_unidade_curricular(
     if await _codigo_unidade_em_uso(session, dados.codigo):
         raise CodigoDuplicado
 
+    if dados.curso_id is not None:
+        await obter_curso(session, dados.curso_id)
+
     unidade = UnidadeCurricular(
         codigo=dados.codigo,
         nome=dados.nome,
+        curso_id=dados.curso_id,
     )
 
     session.add(unidade)
@@ -160,10 +164,18 @@ async def atualizar_unidade_curricular(
 ) -> UnidadeCurricular:
     unidade = await obter_unidade_curricular(session, unidade_id)
 
-    alteracoes = dados.model_dump(
-        exclude_unset=True,
-        exclude_none=True,
-    )
+    alteracoes = dados.model_dump(exclude_unset=True)
+
+    alteracoes = {
+        campo: valor
+        for campo, valor in alteracoes.items()
+        if campo == "curso_id" or valor is not None
+    }
+
+    # Verifica se o novo curso existe.
+    if alteracoes.get("curso_id") is not None:
+        await obter_curso(session, alteracoes["curso_id"])
+
     novo_codigo = alteracoes.get("codigo")
 
     if novo_codigo is not None and await _codigo_unidade_em_uso(session, novo_codigo, unidade_id):
