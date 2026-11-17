@@ -111,3 +111,53 @@ async def test_atualizar_com_curso_inexistente_devolve_404(client: AsyncClient) 
         headers=ADMIN,
     )
     assert response.status_code == 404
+
+
+async def test_alterar_associacao_entre_dois_cursos(
+    client: AsyncClient,
+) -> None:
+    curso_a = await client.post(
+        CURSOS_URL,
+        json={"codigo": "LEI-A", "nome": "Engenharia Informática"},
+        headers=ADMIN,
+    )
+    assert curso_a.status_code == 201, curso_a.text
+
+    curso_b = await client.post(
+        CURSOS_URL,
+        json={"codigo": "LEI-B", "nome": "Engenharia de Computadores"},
+        headers=ADMIN,
+    )
+    assert curso_b.status_code == 201, curso_b.text
+
+    unidade = await client.post(
+        UNIDADES_URL,
+        json={
+            "codigo": "CD-MOVE",
+            "nome": "Computação Distribuída",
+            "curso_id": curso_a.json()["id"],
+        },
+        headers=ADMIN,
+    )
+    assert unidade.status_code == 201, unidade.text
+    unidade_id = unidade.json()["id"]
+
+    atualizacao = await client.patch(
+        f"{UNIDADES_URL}/{unidade_id}",
+        json={"curso_id": curso_b.json()["id"]},
+        headers=ADMIN,
+    )
+
+    assert atualizacao.status_code == 200, atualizacao.text
+    assert atualizacao.json()["curso_id"] == curso_b.json()["id"]
+    assert atualizacao.json()["codigo"] == "CD-MOVE"
+    assert atualizacao.json()["nome"] == "Computação Distribuída"
+
+    consulta = await client.get(
+        f"{UNIDADES_URL}/{unidade_id}",
+        headers=ADMIN,
+    )
+
+    assert consulta.status_code == 200
+    assert consulta.json()["curso_id"] == curso_b.json()["id"]
+    assert consulta.json()["nome"] == "Computação Distribuída"

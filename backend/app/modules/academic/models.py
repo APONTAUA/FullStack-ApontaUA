@@ -19,10 +19,10 @@ class Curso(Base):
     nome: Mapped[str] = mapped_column(String(NOME_MAX_LENGTH))
 
     unidades_curriculares: Mapped[list["UnidadeCurricular"]] = relationship(
-        back_populates="curso"
+        back_populates="curso",
+        passive_deletes="all",
     )
 
-   
 
 class UnidadeCurricular(Base):
     """Unidade curricular da UA (RF-016, RF-017, US-016)."""
