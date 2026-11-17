@@ -152,6 +152,9 @@ async def criar_unidade(
     except service.CodigoDuplicado:
         raise UC_DUPLICATE from None
 
+    except service.CursoNaoEncontrado:
+        raise NOT_FOUND from None
+
 
 @unidades_router.patch(
     "/{unidade_id}",
@@ -171,6 +174,9 @@ async def atualizar_unidade(
         raise UC_NOT_FOUND from None
     except service.CodigoDuplicado:
         raise UC_DUPLICATE from None
+
+    except service.CursoNaoEncontrado:
+        raise NOT_FOUND from None
 
 
 @unidades_router.delete(
