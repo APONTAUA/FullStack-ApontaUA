@@ -1,3 +1,5 @@
+import math
+
 import pytest
 
 from backend.app.modules.reputation.service import (
@@ -154,3 +156,32 @@ def test_exemplo_completo_do_historial_a_reputacao():
     )
 
     assert reputacao == pytest.approx(54)
+
+
+NAO_FINITOS = [math.nan, math.inf, -math.inf]
+
+
+@pytest.mark.parametrize("invalido", NAO_FINITOS)
+def test_reputacao_rejeita_valores_nao_finitos(invalido):
+    """NaN e infinito não são critérios válidos."""
+    with pytest.raises(ValueError):
+        calcular_reputacao(
+            qualidade=0, utilidade=invalido, colaboracao=0, melhoria_continua=0, fiabilidade=0
+        )
+
+
+@pytest.mark.parametrize("invalido", NAO_FINITOS)
+def test_criterios_rejeitam_valores_nao_finitos(invalido):
+    """Nenhum critério aceita NaN nem infinito."""
+    with pytest.raises(ValueError):
+        calcular_qualidade(invalido, 10)
+    with pytest.raises(ValueError):
+        calcular_qualidade(4, invalido)
+    with pytest.raises(ValueError):
+        calcular_utilidade(invalido, 0)
+    with pytest.raises(ValueError):
+        calcular_colaboracao(0, invalido)
+    with pytest.raises(ValueError):
+        calcular_melhoria_continua(invalido)
+    with pytest.raises(ValueError):
+        calcular_fiabilidade(invalido)
