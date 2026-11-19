@@ -5,10 +5,10 @@ from datetime import timedelta
 from typing import BinaryIO
 from urllib.parse import urlsplit
 
-from minio import Minio
 from minio.error import S3Error
 
 from backend.app.core.config import Settings, get_settings
+from minio import Minio
 
 
 def _client(endpoint: str, access_key: str, secret_key: str, region: str) -> Minio:
