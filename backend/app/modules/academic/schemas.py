@@ -33,3 +33,25 @@ class CursoRead(BaseModel):
     id: uuid.UUID
     codigo: str
     nome: str
+
+
+class UnidadeCurricularCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    codigo: Codigo
+    nome: Nome
+
+
+class UnidadeCurricularUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    codigo: Codigo = None
+    nome: Nome = None
+
+
+class UnidadeCurricularRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    codigo: str
+    nome: str
