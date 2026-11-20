@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from backend.app.core.database import database_url
 from backend.app.core.db_base import Base
 from backend.app.modules.academic import models as academic_models  # noqa: F401
+from backend.app.modules.academic.topicos import models as topico_models  # noqa: F401
 from backend.app.modules.storage import models as storage_models  # noqa: F401
 
 config = context.config
