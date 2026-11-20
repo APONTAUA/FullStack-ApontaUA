@@ -1,0 +1,37 @@
+name: Branch direction
+
+on:
+  pull_request:
+    branches:
+      - dev
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - edited
+
+permissions:
+  contents: read
+
+jobs:
+  validate-branch-direction:
+    name: Validate branch direction
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce the development flow
+        env:
+          BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          if [[ "$BASE_BRANCH" == "main" && "$HEAD_BRANCH" != "dev" ]]; then
+            echo "Pull requests to main must come from dev (received: $HEAD_BRANCH)."
+            exit 1
+          fi
+
+          if [[ "$BASE_BRANCH" == "dev" && "$HEAD_BRANCH" == "main" ]]; then
+            echo "Pull requests from main to dev are not part of the development flow."
+            exit 1
+          fi
+
+          echo "Branch direction is valid: $HEAD_BRANCH -> $BASE_BRANCH."
