@@ -17,3 +17,13 @@ class Curso(Base):
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     codigo: Mapped[str] = mapped_column(String(CODIGO_MAX_LENGTH), unique=True)
     nome: Mapped[str] = mapped_column(String(NOME_MAX_LENGTH))
+
+
+class UnidadeCurricular(Base):
+    """Unidade curricular da UA (RF-016, RF-017, US-016)."""
+
+    __tablename__ = "unidade_curricular"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    codigo: Mapped[str] = mapped_column(String(CODIGO_MAX_LENGTH), unique=True, nullable=False)
+    nome: Mapped[str] = mapped_column(String(NOME_MAX_LENGTH), nullable=False)
