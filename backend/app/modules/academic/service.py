@@ -4,8 +4,13 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.app.modules.academic.models import Curso
-from backend.app.modules.academic.schemas import CursoCreate, CursoUpdate
+from backend.app.modules.academic.models import Curso, UnidadeCurricular
+from backend.app.modules.academic.schemas import (
+    CursoCreate,
+    CursoUpdate,
+    UnidadeCurricularCreate,
+    UnidadeCurricularUpdate,
+)
 
 
 class CursoNaoEncontrado(Exception):
@@ -83,3 +88,114 @@ async def remover_curso(session: AsyncSession, curso_id: uuid.UUID) -> None:
         # por isso um curso com associações não pode ser apagado (US-015, critério 4).
         await session.rollback()
         raise CursoComAssociacoes from None
+
+
+async def listar_unidades_curriculares(session: AsyncSession) -> list[UnidadeCurricular]:
+    result = await session.scalars(
+        select(UnidadeCurricular).order_by(
+            UnidadeCurricular.nome,
+            UnidadeCurricular.codigo,
+        )
+    )
+    return list(result)
+
+
+class UnidadeCurricularNaoEncontrada(Exception):
+    pass
+
+
+async def obter_unidade_curricular(
+    session: AsyncSession, unidade_id: uuid.UUID
+) -> UnidadeCurricular:
+    unidade = await session.get(UnidadeCurricular, unidade_id)
+
+    if unidade is None:
+        raise UnidadeCurricularNaoEncontrada
+
+    return unidade
+
+
+async def _codigo_unidade_em_uso(
+    session: AsyncSession,
+    codigo: str,
+    ignorar_id: uuid.UUID | None = None,
+) -> bool:
+    query = select(UnidadeCurricular.id).where(UnidadeCurricular.codigo == codigo)
+
+    if ignorar_id is not None:
+        query = query.where(UnidadeCurricular.id != ignorar_id)
+
+    return await session.scalar(query) is not None
+
+
+async def criar_unidade_curricular(
+    session: AsyncSession,
+    dados: UnidadeCurricularCreate,
+) -> UnidadeCurricular:
+    if await _codigo_unidade_em_uso(session, dados.codigo):
+        raise CodigoDuplicado
+
+    unidade = UnidadeCurricular(
+        codigo=dados.codigo,
+        nome=dados.nome,
+    )
+
+    session.add(unidade)
+
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise CodigoDuplicado from None
+
+    await session.refresh(unidade)
+
+    return unidade
+
+
+async def atualizar_unidade_curricular(
+    session: AsyncSession,
+    unidade_id: uuid.UUID,
+    dados: UnidadeCurricularUpdate,
+) -> UnidadeCurricular:
+    unidade = await obter_unidade_curricular(session, unidade_id)
+
+    alteracoes = dados.model_dump(
+        exclude_unset=True,
+        exclude_none=True,
+    )
+    novo_codigo = alteracoes.get("codigo")
+
+    if novo_codigo is not None and await _codigo_unidade_em_uso(session, novo_codigo, unidade_id):
+        raise CodigoDuplicado
+
+    for campo, valor in alteracoes.items():
+        setattr(unidade, campo, valor)
+
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise CodigoDuplicado from None
+
+    await session.refresh(unidade)
+
+    return unidade
+
+
+class UnidadeCurricularComAssociacoes(Exception):
+    pass
+
+
+async def remover_unidade_curricular(
+    session: AsyncSession,
+    unidade_id: uuid.UUID,
+) -> None:
+    unidade = await obter_unidade_curricular(session, unidade_id)
+
+    await session.delete(unidade)
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise UnidadeCurricularComAssociacoes from None
