@@ -39,3 +39,11 @@ container. No ambiente integrado, o NGINX recebe o tráfego do browser e encamin
 os pedidos `/api/v1/` para a API. Consulte
 [`docs/development/containerized-environment.md`](../docs/development/containerized-environment.md)
 para iniciar a stack.
+
+## Papel simulado em desenvolvimento
+
+Enquanto a autenticação não existe, o modo de desenvolvimento mostra um seletor
+"Papel simulado" e envia o papel escolhido no cabeçalho `X-Dev-Role`
+(ver `src/services/api/client.ts`). O seletor e o cabeçalho não existem no build
+de produção. Para usar a API fora do Docker, o pedido `/api/v1` tem de chegar ao
+backend (por exemplo, através do NGINX do `compose.yaml`).
