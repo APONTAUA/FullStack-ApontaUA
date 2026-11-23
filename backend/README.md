@@ -41,8 +41,9 @@ vem das mesmas variáveis de ambiente da API; `alembic.ini` não guarda credenci
 
 Enquanto a autenticação institucional (EPIC-01) e os papéis (EPIC-02) não existem,
 as rotas protegidas leem o papel do cabeçalho `X-Dev-Role` (por exemplo,
-`X-Dev-Role: administrador`). Isto só funciona com `APP_ENV` igual a `development`
-ou `test`; nos restantes ambientes, as rotas protegidas devolvem 401. A lógica está em
+`X-Dev-Role: administrador`). Isto só funciona com `APP_ENV` definido explicitamente
+como `development` ou `test` (o `.env.example` e o `compose.yaml` já o definem). Se
+`APP_ENV` faltar ou tiver outro valor, as rotas protegidas devolvem 401. A lógica está em
 `backend/app/core/permissions.py` e deve ser substituída quando a autenticação existir.
 
 ## Persistência e integrações

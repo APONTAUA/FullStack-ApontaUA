@@ -1,17 +1,38 @@
+import { useState } from 'react'
+
+import { CursosAdminPage } from '../features/academic-structure/CursosAdminPage'
+import { DEV_ROLES, getDevRole, setDevRole, type DevRole } from '../services/api/client'
+
 export function App() {
+  const [role, setRole] = useState<DevRole>(getDevRole())
+
+  function changeRole(next: DevRole) {
+    setDevRole(next)
+    setRole(next)
+  }
+
   return (
     <main className="app-shell">
       <header className="app-header">
         <p className="app-eyebrow">Universidade de Aveiro</p>
         <h1>ApontaUA</h1>
       </header>
-      <section aria-labelledby="welcome-title" className="welcome-card">
-        <h2 id="welcome-title">Frontend inicial</h2>
-        <p>
-          A estrutura React está pronta. As funcionalidades serão organizadas por módulos à medida
-          que forem implementadas.
-        </p>
-      </section>
+
+      {import.meta.env.DEV && (
+        <aside className="dev-panel" aria-label="Opções de desenvolvimento">
+          <label htmlFor="dev-role">Papel simulado (só em desenvolvimento)</label>
+          <select id="dev-role" value={role} onChange={(event) => changeRole(event.target.value as DevRole)}>
+            {DEV_ROLES.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </aside>
+      )}
+
+      {/* A key obriga a recarregar a lista com o novo papel. */}
+      <CursosAdminPage key={role} canManage={role === 'administrador'} />
     </main>
   )
 }
