@@ -4,6 +4,9 @@ on:
   pull_request:
     branches:
       - dev
+  push:
+    branches:
+      - dev
 
 permissions:
   contents: read
@@ -83,3 +86,88 @@ jobs:
           MINIO_APP_USER: ci_minio_app
           MINIO_APP_PASSWORD: ci_only_minio_app_password
         run: docker compose config --quiet
+
+      - name: Validate deployment Compose image references
+        env:
+          API_IMAGE: ghcr.io/apontaua/fullstack-apontaua-api:ci
+          WEB_IMAGE: ghcr.io/apontaua/fullstack-apontaua-web:ci
+          POSTGRES_IMAGE: postgres:17.12-alpine3.24
+          COMPOSE_PROJECT_NAME: apontaua-ci
+          APP_ENV: test
+          POSTGRES_DB: ci_db
+          POSTGRES_USER: ci_admin
+          POSTGRES_PASSWORD: ci_only_postgres_password
+          DB_USER: ci_app
+          DB_PASSWORD: ci_only_password
+          MINIO_ROOT_USER: ci_minio_root
+          MINIO_ROOT_PASSWORD: ci_only_minio_root_password
+          MINIO_APP_USER: ci_minio_app
+          MINIO_APP_PASSWORD: ci_only_minio_app_password
+          MINIO_PUBLIC_ENDPOINT: https://ci.invalid
+          ALLOWED_HOSTS: '["ci.invalid"]'
+        run: docker compose -f compose.deployment.yaml config --quiet
+
+  publish-images:
+    name: Publish application images to GHCR
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    needs:
+      - backend
+      - frontend
+      - compose-config
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate backend image metadata
+        id: backend-meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/apontaua/fullstack-apontaua-api
+          tags: |
+            type=sha,format=long,prefix=sha-
+            type=raw,value=dev
+
+      - name: Build and publish backend image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.backend-meta.outputs.tags }}
+          labels: ${{ steps.backend-meta.outputs.labels }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+      - name: Generate web image metadata
+        id: web-meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/apontaua/fullstack-apontaua-web
+          tags: |
+            type=sha,format=long,prefix=sha-
+            type=raw,value=dev
+
+      - name: Build and publish web image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./deployment/Dockerfile.web
+          push: true
+          tags: ${{ steps.web-meta.outputs.tags }}
+          labels: ${{ steps.web-meta.outputs.labels }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web

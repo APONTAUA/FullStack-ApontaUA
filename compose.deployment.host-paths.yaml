@@ -1,0 +1,22 @@
+volumes:
+  postgres_data:
+    name: ${POSTGRES_VOLUME_NAME:-apontaua-deployment-postgres-data}
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${POSTGRES_DATA_PATH:?Set POSTGRES_DATA_PATH to an absolute host directory}
+  uploaded_files:
+    name: ${UPLOADED_FILES_VOLUME_NAME:-apontaua-deployment-uploaded-files}
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${UPLOADED_FILES_DATA_PATH:?Set UPLOADED_FILES_DATA_PATH to an absolute host directory}
+  minio_data:
+    name: ${MINIO_VOLUME_NAME:-apontaua-deployment-minio-data}
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${MINIO_DATA_PATH:?Set MINIO_DATA_PATH to an absolute host directory}

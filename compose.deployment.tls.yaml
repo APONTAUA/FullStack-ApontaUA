@@ -1,0 +1,8 @@
+services:
+  web:
+    ports:
+      - "${WEB_BIND_ADDRESS:-127.0.0.1}:${HTTPS_PORT:-8443}:8443"
+    volumes:
+      - ./nginx/deployment-tls.conf.template:/etc/nginx/templates/https.conf.template:ro
+      - ${TLS_CERTIFICATE_FILE:?Set TLS_CERTIFICATE_FILE to an IT-provided certificate chain}:/etc/nginx/tls/fullchain.pem:ro
+      - ${TLS_PRIVATE_KEY_FILE:?Set TLS_PRIVATE_KEY_FILE to an IT-provided private key}:/etc/nginx/tls/private.key:ro

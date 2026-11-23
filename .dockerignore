@@ -7,6 +7,7 @@ __pycache__/
 .env
 .env.*
 package-lock.json
+!frontend/package-lock.json
 var/
 postgres_data/
 uploaded_files/
