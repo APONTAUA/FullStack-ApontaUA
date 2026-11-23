@@ -23,7 +23,16 @@ FRONTEND_USAGE = {
     "typescript": "Verificação de tipos TypeScript",
     "vite": "Servidor de desenvolvimento e build",
 }
-BACKEND_RUNTIME = {"alembic", "asyncpg", "fastapi", "minio", "pydantic-settings", "sqlalchemy", "uvicorn"}
+BACKEND_RUNTIME = {
+    "alembic",
+    "asyncpg",
+    "fastapi",
+    "minio",
+    "pydantic-settings",
+    "python-multipart",
+    "sqlalchemy",
+    "uvicorn",
+}
 BACKEND_TEST = {"aiosqlite", "httpx", "pytest", "pytest-asyncio"}
 BACKEND_BUILD_TRANSITIVE = {"packaging", "pathspec", "pluggy", "tomlkit", "trove-classifiers"}
 
