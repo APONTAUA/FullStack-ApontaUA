@@ -1,8 +1,7 @@
-
 """Cria a tabela unidade_curricular (US-016).
 
-Revision ID: 0002_create_unidade_curricular
-Revises: 0001_create_curso
+Revision ID: 0003_create_unidade_curricular
+Revises: 0002_stored_file
 """
 
 from collections.abc import Sequence
@@ -10,8 +9,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0002_create_unidade_curricular"
-down_revision: str | None = "0001_create_curso"
+revision: str = "0003_create_unidade_curricular"
+down_revision: str | None = "0002_stored_file"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

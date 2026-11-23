@@ -19,6 +19,12 @@ class Settings(BaseSettings):
     postgres_host: str = "localhost"
     postgres_port: int = Field(default=5432, gt=0, le=65535)
     file_storage_path: Path = Path("./var/files")
+    minio_internal_endpoint: str = "http://localhost:9000"
+    minio_public_endpoint: str = "http://localhost:9000"
+    minio_access_key: str = ""
+    minio_secret_key: SecretStr = Field(default=SecretStr(""), repr=False)
+    minio_bucket: str = "apontaua-files"
+    minio_region: str = "us-east-1"
     max_upload_size_mb: int = Field(default=25, gt=0)
     cors_origins: list[str] = Field(default_factory=list)
     allowed_hosts: list[str] = Field(default_factory=lambda: ["localhost", "127.0.0.1"])
