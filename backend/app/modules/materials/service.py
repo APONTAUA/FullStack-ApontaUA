@@ -6,12 +6,19 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from fastapi import UploadFile
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.modules.academic.models import UnidadeCurricular
 from backend.app.modules.academic.topicos.models import Topico
 from backend.app.modules.materials.formats import nome_seguro, tipo_do_ficheiro
-from backend.app.modules.materials.models import Material, OrigemMaterial, VersaoMaterial
+from backend.app.modules.materials.models import (
+    CategoriaMaterial,
+    EstadoMaterial,
+    Material,
+    OrigemMaterial,
+    VersaoMaterial,
+)
 from backend.app.modules.materials.schemas import MaterialCreate
 from backend.app.modules.storage.models import StoredFile
 
@@ -60,6 +67,50 @@ class Publicacao:
     versao: VersaoMaterial
     ficheiro: StoredFile
     uc_id: uuid.UUID
+
+
+async def pesquisar_materiais(
+    session: AsyncSession,
+    *,
+    termo: str | None = None,
+    categoria: CategoriaMaterial | None = None,
+    topico_id: uuid.UUID | None = None,
+) -> list[tuple[Material, uuid.UUID, VersaoMaterial, StoredFile]]:
+    """Pesquisa materiais publicados, aplicando em conjunto os critérios recebidos."""
+    versao_atual = (
+        select(
+            VersaoMaterial.material_id.label("material_id"),
+            func.max(VersaoMaterial.numero).label("numero"),
+        )
+        .group_by(VersaoMaterial.material_id)
+        .subquery()
+    )
+    consulta = (
+        select(Material, Topico.uc_id, VersaoMaterial, StoredFile)
+        .join(Topico, Material.topico_id == Topico.id)
+        .join(versao_atual, versao_atual.c.material_id == Material.id)
+        .join(
+            VersaoMaterial,
+            (VersaoMaterial.material_id == Material.id)
+            & (VersaoMaterial.numero == versao_atual.c.numero),
+        )
+        .join(StoredFile, VersaoMaterial.ficheiro_id == StoredFile.id)
+        .where(Material.estado == EstadoMaterial.PUBLICADO)
+    )
+
+    if termo:
+        termo_literal = termo.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        consulta = consulta.where(
+            Material.titulo.ilike(f"%{termo_literal}%", escape="\\")
+            | Material.descricao.ilike(f"%{termo_literal}%", escape="\\")
+        )
+    if categoria is not None:
+        consulta = consulta.where(Material.categoria == categoria)
+    if topico_id is not None:
+        consulta = consulta.where(Material.topico_id == topico_id)
+
+    consulta = consulta.order_by(Material.publicado_em.desc(), Material.id)
+    return list((await session.execute(consulta)).all())
 
 
 async def _validar_associacao(session: AsyncSession, dados: MaterialCreate) -> None:

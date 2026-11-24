@@ -34,6 +34,12 @@ h3 { margin: 0 0 0.75rem; font-size: 1.15rem; }
 .form-hint, .field-help { margin: 0; color: #3d5257; font-size: 0.9rem; }
 .field { display: grid; gap: 0.35rem; }
 .field label { font-weight: 600; }
+.field select { min-height: 2.75rem; padding: 0.5rem 0.75rem; border: 1px solid #6b8086; border-radius: 0.5rem; background: #fff; color: inherit; }
+.materials-search-form { display: grid; grid-template-columns: minmax(12rem, 2fr) minmax(12rem, 1fr) auto; align-items: end; gap: 1rem; }
+.materials-search-results { display: grid; gap: 1rem; margin-top: 1.5rem; }
+.academic-material { padding: 1rem; border: 1px solid #d8e2e2; border-radius: 0.75rem; background: #fff; }
+.academic-material h3 { margin-bottom: 0.5rem; }
+.academic-material p:last-child { margin-bottom: 0; }
 .field input[aria-invalid="true"] { border: 2px solid #b3261e; }
 .field-error { margin: 0; color: #b3261e; font-size: 0.9rem; font-weight: 600; }
 .field-error::before { content: "⚠ "; }
@@ -53,6 +59,7 @@ h3 { margin: 0 0 0.75rem; font-size: 1.15rem; }
 .data-table th, .data-table td { padding: 0.75rem; border-bottom: 1px solid #d8e2e2; text-align: left; vertical-align: middle; }
 .data-table th { color: #3d5257; font-size: 0.9rem; }
 @media (max-width: 40rem) {
+  .materials-search-form { grid-template-columns: 1fr; }
   .data-table thead { display: none; }
   .data-table tr { display: block; padding: 0.75rem 0; border-bottom: 1px solid #d8e2e2; }
   .data-table td { display: block; padding: 0.25rem 0; border: 0; }

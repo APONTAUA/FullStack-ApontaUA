@@ -1,13 +1,15 @@
+import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.core.config import settings
 from backend.app.core.database import get_db_session
-from backend.app.core.permissions import CurrentUserId, Papel, require_roles
+from backend.app.core.permissions import CurrentRole, CurrentUserId, Papel, require_roles
 from backend.app.modules.materials import service
 from backend.app.modules.materials.formats import TIPOS_POR_EXTENSAO
+from backend.app.modules.materials.models import CategoriaMaterial
 from backend.app.modules.materials.schemas import (
     FicheiroRead,
     MaterialCreate,
@@ -62,6 +64,52 @@ ERROS = {
         f"The file exceeds the maximum size of {settings.max_upload_size_mb} MB.",
     ),
 }
+
+
+@router.get(
+    "",
+    response_model=list[MaterialRead],
+    summary="Pesquisa materiais publicados",
+)
+async def pesquisar(
+    session: Session,
+    _: CurrentRole,
+    q: Annotated[str | None, Query(max_length=200)] = None,
+    categoria: CategoriaMaterial | None = None,
+    topico_id: uuid.UUID | None = None,
+) -> list[MaterialRead]:
+    resultados = await service.pesquisar_materiais(
+        session,
+        termo=q.strip() if q and q.strip() else None,
+        categoria=categoria,
+        topico_id=topico_id,
+    )
+    return [
+        MaterialRead(
+            id=material.id,
+            titulo=material.titulo,
+            descricao=material.descricao,
+            categoria=material.categoria,
+            origem=material.origem,
+            ano_letivo=material.ano_letivo,
+            estado=material.estado,
+            uc_id=uc_id,
+            topico_id=material.topico_id,
+            autor_id=material.autor_id,
+            publicado_em=material.publicado_em,
+            versao_atual=VersaoRead(
+                numero=versao.numero,
+                criada_em=versao.criada_em,
+                ficheiro=FicheiroRead(
+                    nome_original=ficheiro.original_name,
+                    tipo=ficheiro.mime_type,
+                    tamanho_bytes=ficheiro.size_bytes,
+                    sha256=ficheiro.checksum_sha256,
+                ),
+            ),
+        )
+        for material, uc_id, versao, ficheiro in resultados
+    ]
 
 
 @router.post(

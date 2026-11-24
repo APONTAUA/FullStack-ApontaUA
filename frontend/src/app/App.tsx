@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { CursosAdminPage } from '../features/academic-structure/CursosAdminPage'
+import { MaterialsSearchPage } from '../features/materials/MaterialsSearchPage'
 import { DEV_ROLES, getDevRole, setDevRole, type DevRole } from '../services/api/client'
 
 export function App() {
@@ -33,6 +34,7 @@ export function App() {
 
       {/* A key obriga a recarregar a lista com o novo papel. */}
       <CursosAdminPage key={role} canManage={role === 'administrador'} />
+      <MaterialsSearchPage />
     </main>
   )
 }

@@ -59,6 +59,10 @@ e o ficheiro em `ficheiro`. Aceita PDF, MD, DOC/DOCX, XLS/XLSX, PPT/PPTX, JPEG e
 `MAX_UPLOAD_SIZE_MB`. O ficheiro vai para o MinIO e a publicação cria o material e a sua
 versão 1.
 
+`GET /api/v1/materiais` pesquisa materiais publicados e exige utilizador autenticado. Aceita
+`q` para procurar no título e descrição, `categoria` (`apontamentos`, `apresentacao`,
+`exercicios`, `exame`, `solucoes` ou `outro`) e `topico_id`; os critérios podem ser combinados.
+
 ## Persistência e integrações
 
 PostgreSQL é a fonte de verdade. Ficheiros originais são guardados no caminho
