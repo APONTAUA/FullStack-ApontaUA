@@ -6,9 +6,10 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from fastapi import UploadFile
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.app.modules.academic.models import UnidadeCurricular
+from backend.app.modules.academic.models import AnoLetivo, UnidadeCurricular
 from backend.app.modules.academic.topicos.models import Topico
 from backend.app.modules.materials.formats import nome_seguro, tipo_do_ficheiro
 from backend.app.modules.materials.models import Material, OrigemMaterial, VersaoMaterial
@@ -42,6 +43,10 @@ class TopicoForaDaUnidadeCurricular(Exception):
     pass
 
 
+class AnoLetivoNaoEncontrado(Exception):
+    pass
+
+
 class FormatoNaoSuportado(Exception):
     pass
 
@@ -62,7 +67,7 @@ class Publicacao:
     uc_id: uuid.UUID
 
 
-async def _validar_associacao(session: AsyncSession, dados: MaterialCreate) -> None:
+async def _validar_associacao(session: AsyncSession, dados: MaterialCreate) -> uuid.UUID | None:
     """Critérios 2 e 3: a UC e o tópico existem e o tópico pertence a essa UC (RN-047)."""
     if await session.get(UnidadeCurricular, dados.uc_id) is None:
         raise UnidadeCurricularNaoEncontrada
@@ -71,6 +76,20 @@ async def _validar_associacao(session: AsyncSession, dados: MaterialCreate) -> N
         raise TopicoNaoEncontrado
     if topico.uc_id != dados.uc_id:
         raise TopicoForaDaUnidadeCurricular
+
+    if dados.ano_letivo is not None:
+        ano_inicio = int(dados.ano_letivo.split('/')[0])
+        ano_id = await session.scalar(
+            select(AnoLetivo.id).where(
+                AnoLetivo.ano_inicio == ano_inicio,
+                AnoLetivo.ano_fim == ano_inicio + 1,
+            )
+        )
+        if ano_id is None:
+            raise AnoLetivoNaoEncontrado
+        return ano_id
+
+    return None
 
 
 async def _ler_ficheiro(ficheiro: UploadFile, max_bytes: int) -> tuple[io.BytesIO, int, str]:
@@ -99,7 +118,7 @@ async def publicar_material(
     max_bytes: int,
 ) -> Publicacao:
     """Publica um material da comunidade, sem aprovação prévia (US-022, RN-023)."""
-    await _validar_associacao(session, dados)
+    ano_letivo_id = await _validar_associacao(session, dados)
 
     nome = nome_seguro(ficheiro.filename)
     tipo = tipo_do_ficheiro(nome) if nome else None
@@ -127,6 +146,7 @@ async def publicar_material(
             categoria=dados.categoria,
             origem=OrigemMaterial.COMUNIDADE,  # Critério 6 (RN-054)
             ano_letivo=dados.ano_letivo,
+            ano_letivo_id=ano_letivo_id,
             topico_id=dados.topico_id,
             autor_id=autor_id,  # Critério 4 (RN-048)
         )

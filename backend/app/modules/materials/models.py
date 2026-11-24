@@ -74,6 +74,10 @@ class Material(Base):
     categoria: Mapped[CategoriaMaterial] = mapped_column(_enum(CategoriaMaterial, "categoria"))
     origem: Mapped[OrigemMaterial] = mapped_column(_enum(OrigemMaterial, "origem"))
     ano_letivo: Mapped[str | None] = mapped_column(String(ANO_LETIVO_LENGTH), nullable=True)
+    ano_letivo_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("ano_letivo.id", ondelete="RESTRICT"),
+        nullable=True, index=True
+    )
     estado: Mapped[EstadoMaterial] = mapped_column(
         _enum(EstadoMaterial, "estado"), default=EstadoMaterial.PUBLICADO
     )
