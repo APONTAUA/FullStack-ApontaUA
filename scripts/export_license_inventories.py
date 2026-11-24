@@ -23,7 +23,18 @@ FRONTEND_USAGE = {
     "typescript": "Verificação de tipos TypeScript",
     "vite": "Servidor de desenvolvimento e build",
 }
-BACKEND_RUNTIME = {"asyncpg", "fastapi", "pydantic-settings", "sqlalchemy", "uvicorn"}
+BACKEND_RUNTIME = {
+    "alembic",
+    "asyncpg",
+    "fastapi",
+    "minio",
+    "pydantic-settings",
+    "python-multipart",
+    "sqlalchemy",
+    "uvicorn",
+}
+BACKEND_TEST = {"aiosqlite", "httpx", "pytest", "pytest-asyncio"}
+BACKEND_BUILD_TRANSITIVE = {"packaging", "pathspec", "pluggy", "tomlkit", "trove-classifiers"}
 
 
 def canonical_name(name: str) -> str:
@@ -32,7 +43,7 @@ def canonical_name(name: str) -> str:
 
 def write_csv(path: Path, rows: list[dict[str, str]]) -> None:
     with path.open("w", encoding="utf-8-sig", newline="") as stream:
-        writer = csv.DictWriter(stream, fieldnames=FIELDS)
+        writer = csv.DictWriter(stream, fieldnames=FIELDS, lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
 
@@ -128,9 +139,30 @@ def distribution_license(dist: importlib.metadata.Distribution) -> tuple[str, st
     return "Não declarada", "Metadados e ficheiros de licença da distribuição sem identificação automática"
 
 
+def lock_closure(lock: dict, roots: set[str]) -> set[str]:
+    """Pacotes alcançáveis a partir de `roots` no grafo de dependências do uv.lock."""
+    graph = {
+        canonical_name(package["name"]): {
+            canonical_name(dependency["name"]) for dependency in package.get("dependencies", [])
+        }
+        for package in lock["package"]
+    }
+    seen: set[str] = set()
+    pending = [canonical_name(root) for root in roots]
+    while pending:
+        name = pending.pop()
+        if name in seen:
+            continue
+        seen.add(name)
+        pending.extend(graph.get(name, set()))
+    return seen
+
+
 def backend_rows() -> list[dict[str, str]]:
     lock_file = ROOT / "uv.lock"
     lock = tomllib.loads(lock_file.read_text(encoding="utf-8"))
+    runtime_closure = lock_closure(lock, BACKEND_RUNTIME)
+    test_closure = lock_closure(lock, BACKEND_TEST) - runtime_closure
     installed = {
         canonical_name(dist.metadata["Name"]): dist
         for dist in importlib.metadata.distributions()
@@ -163,8 +195,14 @@ def backend_rows() -> list[dict[str, str]]:
         elif name == "hatchling":
             kind = "Direta build"
             usage = "Build backend declarado em pyproject.toml e incluído no grupo build"
+        elif name in BACKEND_TEST:
+            kind = "Direta teste"
+            usage = "Ferramenta de testes declarada no grupo test do pyproject.toml"
+        elif normalized in test_closure and name not in BACKEND_BUILD_TRANSITIVE:
+            kind = "Transitiva teste"
+            usage = "Dependência das ferramentas de testes resolvida por uv.lock"
         else:
-            kind = "Transitiva build" if name in {"packaging", "pathspec", "pluggy", "tomlkit", "trove-classifiers"} else "Transitiva runtime"
+            kind = "Transitiva build" if name in BACKEND_BUILD_TRANSITIVE else "Transitiva runtime"
             usage = "Dependência resolvida por uv.lock"
         notes = license_source
         if license_name == "MPL-2.0":

@@ -31,3 +31,19 @@ npm run dev
 O `package-lock.json` deve acompanhar o `package.json`; `npm ci` instala as
 versões nele fixadas. Requer Node.js 20.19+ ou 22.12+, de acordo com os
 requisitos atuais do Vite.
+
+## Docker Compose
+
+O serviço `frontend` executa o servidor de desenvolvimento Vite dentro do
+container. No ambiente integrado, o NGINX recebe o tráfego do browser e encaminha
+os pedidos `/api/v1/` para a API. Consulte
+[`docs/development/containerized-environment.md`](../docs/development/containerized-environment.md)
+para iniciar a stack.
+
+## Papel simulado em desenvolvimento
+
+Enquanto a autenticação não existe, o modo de desenvolvimento mostra um seletor
+"Papel simulado" e envia o papel escolhido no cabeçalho `X-Dev-Role`
+(ver `src/services/api/client.ts`). O seletor e o cabeçalho não existem no build
+de produção. Para usar a API fora do Docker, o pedido `/api/v1` tem de chegar ao
+backend (por exemplo, através do NGINX do `compose.yaml`).

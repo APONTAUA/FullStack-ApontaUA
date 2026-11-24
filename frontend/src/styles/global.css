@@ -19,3 +19,55 @@ h1 { margin-bottom: 0; font-size: clamp(2rem, 5vw, 3rem); }
 .welcome-card { max-width: 42rem; padding: 1.5rem; border: 1px solid #d8e2e2; border-radius: 1rem; background: #fff; box-shadow: 0 0.5rem 1.5rem rgb(23 37 42 / 6%); }
 .welcome-card h2 { margin-bottom: 0.5rem; }
 .welcome-card p { margin-bottom: 0; line-height: 1.6; }
+
+/* US-015 — gestão de cursos */
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+:focus-visible { outline: 3px solid #0b5f73; outline-offset: 2px; }
+.card { padding: 1.5rem; border: 1px solid #d8e2e2; border-radius: 1rem; background: #fff; box-shadow: 0 0.5rem 1.5rem rgb(23 37 42 / 6%); }
+.card h2 { margin-bottom: 0.5rem; }
+h3 { margin: 0 0 0.75rem; font-size: 1.15rem; }
+.section-intro { color: #3d5257; line-height: 1.6; }
+.subsection { margin-top: 1.75rem; }
+.dev-panel { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin-bottom: 1.5rem; padding: 0.75rem 1rem; border: 1px dashed #8a6d00; border-radius: 0.75rem; background: #fff8db; }
+.dev-panel select, .field input { min-height: 2.75rem; padding: 0.5rem 0.75rem; border: 1px solid #6b8086; border-radius: 0.5rem; background: #fff; color: inherit; }
+.curso-form { display: grid; gap: 1rem; max-width: 32rem; }
+.form-hint, .field-help { margin: 0; color: #3d5257; font-size: 0.9rem; }
+.field { display: grid; gap: 0.35rem; }
+.field label { font-weight: 600; }
+.field input[aria-invalid="true"] { border: 2px solid #b3261e; }
+.field-error { margin: 0; color: #b3261e; font-size: 0.9rem; font-weight: 600; }
+.field-error::before { content: "⚠ "; }
+.form-actions, .row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.button { min-height: 2.75rem; padding: 0.5rem 1rem; border: 1px solid #6b8086; border-radius: 0.5rem; background: #fff; color: #17252a; cursor: pointer; }
+.button:disabled { cursor: not-allowed; opacity: 0.6; }
+.button-primary { border-color: #0b5f73; background: #0b5f73; color: #fff; }
+.button-danger { border-color: #b3261e; background: #b3261e; color: #fff; }
+.button-link { min-height: auto; padding: 0; border: 0; background: none; color: #0b5f73; text-decoration: underline; }
+.status:empty { display: none; }
+.status { margin-top: 1rem; padding: 0.75rem 1rem; border-radius: 0.5rem; border-left: 4px solid; }
+.status-success { border-color: #1e6b3a; background: #e8f5ec; color: #14532d; }
+.status-success::before { content: "✓ "; }
+.status-error { border-color: #b3261e; background: #fdecea; color: #7f1d1d; }
+.status-error::before { content: "⚠ "; }
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th, .data-table td { padding: 0.75rem; border-bottom: 1px solid #d8e2e2; text-align: left; vertical-align: middle; }
+.data-table th { color: #3d5257; font-size: 0.9rem; }
+@media (max-width: 40rem) {
+  .data-table thead { display: none; }
+  .data-table tr { display: block; padding: 0.75rem 0; border-bottom: 1px solid #d8e2e2; }
+  .data-table td { display: block; padding: 0.25rem 0; border: 0; }
+}
+
+/* US-019 — tópicos e navegação entre secções */
+.section-nav ul { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0 0 1.5rem; padding: 0; list-style: none; }
+.section-nav .button[aria-current="page"] { border-color: #0b5f73; background: #e3f1f4; color: #0b4a5a; font-weight: 700; box-shadow: inset 0 -3px 0 #0b5f73; }
+.uc-select { max-width: 32rem; min-width: 0; }
+.uc-select select { width: 100%; min-width: 0; max-width: 100%; text-overflow: ellipsis; }
+.uc-select select, .field textarea { min-height: 2.75rem; padding: 0.5rem 0.75rem; border: 1px solid #6b8086; border-radius: 0.5rem; background: #fff; color: inherit; }
+.field textarea { resize: vertical; }
+.topic-list { margin: 0; padding: 0; list-style: none; counter-reset: topico; }
+.topic-item { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid #d8e2e2; counter-increment: topico; }
+.topic-item .curso-form { flex: 1 1 100%; }
+.topic-text { flex: 1 1 16rem; }
+.topic-text strong::before { content: counter(topico) ". "; color: #3d5257; }
+.topic-text p { margin: 0.25rem 0 0; color: #3d5257; }
