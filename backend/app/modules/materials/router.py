@@ -5,16 +5,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.core.config import settings
 from backend.app.core.database import get_db_session
-from backend.app.core.permissions import CurrentUserId, Papel, require_roles
+from backend.app.core.permissions import CurrentUserId, Papel, require_roles, CurrentRole
 from backend.app.modules.materials import service
 from backend.app.modules.materials.formats import TIPOS_POR_EXTENSAO
 from backend.app.modules.materials.schemas import (
     FicheiroRead,
     MaterialCreate,
     MaterialRead,
+    MaterialUpdate,
     VersaoRead,
 )
 from backend.app.modules.storage.service import ObjectStorage
+
+import uuid
 
 router = APIRouter(prefix="/materiais")
 
@@ -46,6 +49,7 @@ class PublicacaoForm(MaterialCreate):
 
 FORMATOS = ", ".join(sorted(ext.lstrip(".") for ext in TIPOS_POR_EXTENSAO))
 ERROS = {
+    service.MaterialNaoEncontrado: (status.HTTP_404_NOT_FOUND, "Material not found."),
     service.UnidadeCurricularNaoEncontrada: (status.HTTP_404_NOT_FOUND, "Course unit not found."),
     service.TopicoNaoEncontrado: (status.HTTP_404_NOT_FOUND, "Topic not found."),
     service.TopicoForaDaUnidadeCurricular: (
@@ -62,6 +66,75 @@ ERROS = {
         f"The file exceeds the maximum size of {settings.max_upload_size_mb} MB.",
     ),
 }
+
+
+def _para_leitura(item: service.MaterialListagem) -> MaterialRead:
+    material = item.material
+    versao = item.versao
+    ficheiro = item.ficheiro
+
+    return MaterialRead(
+        id=material.id,
+        titulo=material.titulo,
+        descricao=material.descricao,
+        categoria=material.categoria,
+        origem=material.origem,
+        ano_letivo=material.ano_letivo,
+        estado=material.estado,
+        uc_id=item.uc_id,
+        topico_id=material.topico_id,
+        autor_id=material.autor_id,
+        publicado_em=material.publicado_em,
+        versao_atual=VersaoRead(
+            numero=versao.numero,
+            criada_em=versao.criada_em,
+            ficheiro=FicheiroRead(
+                nome_original=ficheiro.original_name,
+                tipo=ficheiro.mime_type,
+                tamanho_bytes=ficheiro.size_bytes,
+                sha256=ficheiro.checksum_sha256,
+            ),
+        ),
+    )
+
+
+@router.get(
+    "",
+    response_model=list[MaterialRead],
+    summary="Lista os materiais publicados de um tópico",
+)
+async def listar_por_topico(
+    topico_id: uuid.UUID,
+    session: Session,
+    _: CurrentRole,
+) -> list[MaterialRead]:
+    try:
+        materiais = await service.listar_materiais_por_topico(session, topico_id)
+    except service.TopicoNaoEncontrado:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Topic not found.",
+        ) from None
+
+    return [_para_leitura(item) for item in materiais]
+
+@router.patch(
+    "/{material_id}",
+    response_model=MaterialRead,
+    dependencies=[PODE_PUBLICAR],
+    summary="Atualiza os metadados académicos de um material",
+)
+async def atualizar(
+    material_id: uuid.UUID,
+    dados: MaterialUpdate,
+    session: Session,
+) -> MaterialRead:
+    try:
+        item = await service.atualizar_material(session, material_id, dados)
+    except tuple(ERROS) as erro:
+        codigo, mensagem = ERROS[type(erro)]
+        raise HTTPException(status_code=codigo, detail=mensagem) from None
+    return _para_leitura(item)
 
 
 @router.post(

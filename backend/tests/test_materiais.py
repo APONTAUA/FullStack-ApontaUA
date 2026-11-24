@@ -15,7 +15,7 @@ from backend.app.core.database import get_db_session
 from backend.app.main import app
 from backend.app.modules.academic.models import UnidadeCurricular
 from backend.app.modules.academic.topicos.models import Topico
-from backend.app.modules.materials.models import Material, VersaoMaterial
+from backend.app.modules.materials.models import Material, VersaoMaterial, EstadoMaterial
 from backend.app.modules.materials.router import get_armazenamento
 from backend.app.modules.storage.models import StoredFile
 
@@ -321,3 +321,166 @@ async def test_topico_com_materiais_nao_pode_ser_apagado(
         f"/api/v1/topicos/{estrutura['topico']}", headers=headers("administrador")
     )
     assert response.status_code == 409
+
+
+# Atualização: as associações académicas permanecem consistentes após alterar metadados.
+
+
+async def test_atualiza_metadados_preservando_contexto_academico(
+    client: AsyncClient,
+    storage: FakeStorage,
+    estrutura,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    publicado = await publicar(client, estrutura)
+    assert publicado.status_code == 201
+
+    response = await client.patch(
+        f"{URL}/{publicado.json()['id']}",
+        json={"titulo": "Resumo atualizado", "descricao": "  Novo texto  "},
+        headers=headers(),
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["titulo"] == "Resumo atualizado"
+    assert body["descricao"] == "Novo texto"
+    assert body["uc_id"] == str(estrutura["uc"])
+    assert body["topico_id"] == str(estrutura["topico"])
+
+
+async def test_atualiza_reassociando_topico_da_mesma_uc(
+    client: AsyncClient,
+    storage: FakeStorage,
+    estrutura,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    publicado = await publicar(client, estrutura)
+    assert publicado.status_code == 201
+
+    async with session_factory() as session:
+        novo_topico = Topico(uc_id=estrutura["uc"], nome="Arquitetura", ordem=1)
+        session.add(novo_topico)
+        await session.commit()
+        novo_topico_id = novo_topico.id
+
+    response = await client.patch(
+        f"{URL}/{publicado.json()['id']}",
+        json={"uc_id": str(estrutura["uc"]), "topico_id": str(novo_topico_id)},
+        headers=headers(),
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["topico_id"] == str(novo_topico_id)
+    assert response.json()["uc_id"] == str(estrutura["uc"])
+
+
+@pytest.mark.parametrize(
+    ("campo", "valor", "codigo", "detalhe"),
+    [
+        ("uc_id", str(uuid.uuid4()), 404, "Course unit not found"),
+        ("topico_id", str(uuid.uuid4()), 404, "Topic not found"),
+        ("topico_id", "topico_outra", 422, "does not belong"),
+    ],
+)
+async def test_atualizacao_rejeita_associacao_invalida(
+    client: AsyncClient,
+    storage: FakeStorage,
+    estrutura,
+    campo: str,
+    valor: str,
+    codigo: int,
+    detalhe: str,
+) -> None:
+    publicado = await publicar(client, estrutura)
+    assert publicado.status_code == 201
+
+    if valor == "topico_outra":
+        valor = str(estrutura["topico_outra"])
+
+    response = await client.patch(
+        f"{URL}/{publicado.json()['id']}",
+        json={campo: valor},
+        headers=headers(),
+    )
+
+    assert response.status_code == codigo
+    assert detalhe in response.json()["detail"]
+
+
+async def test_atualiza_material_inexistente(client: AsyncClient) -> None:
+    response = await client.patch(
+        f"{URL}/{uuid.uuid4()}",
+        json={"titulo": "Nota"},
+        headers=headers(),
+    )
+    assert response.status_code == 404
+
+
+# US-021 — consulta de materiais associados a tópicos.
+
+
+async def test_lista_materiais_publicados_por_topico(
+    client: AsyncClient,
+    storage: FakeStorage,
+    estrutura,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    publicado = await publicar(
+        client, estrutura, titulo="Nota visível"
+    )
+    removido = await publicar(
+        client, estrutura, titulo="Nota removida"
+    )
+    outro_topico = await publicar(
+        client,
+        estrutura,
+        titulo="Nota de outra UC",
+        uc_id=str(estrutura["outra_uc"]),
+        topico_id=str(estrutura["topico_outra"]),
+    )
+
+    assert publicado.status_code == 201
+    assert removido.status_code == 201
+    assert outro_topico.status_code == 201
+
+    async with session_factory() as session:
+        material = await session.get(
+            Material,
+            uuid.UUID(removido.json()["id"]),
+        )
+        assert material is not None
+        material.estado = EstadoMaterial.REMOVIDO
+        await session.commit()
+
+    response = await client.get(
+        URL,
+        params={"topico_id": str(estrutura["topico"])},
+        headers=headers(),
+    )
+
+    assert response.status_code == 200, response.text
+
+    materiais = response.json()
+
+    assert len(materiais) == 1
+    assert materiais[0]["id"] == publicado.json()["id"]
+    assert materiais[0]["titulo"] == "Nota visível"
+    assert materiais[0]["uc_id"] == str(estrutura["uc"])
+    assert materiais[0]["topico_id"] == str(estrutura["topico"])
+    assert materiais[0]["estado"] == "publicado"
+
+    assert materiais[0]["versao_atual"]["numero"] == 1
+    assert materiais[0]["versao_atual"]["ficheiro"]["nome_original"] == "resumo.pdf"
+
+
+async def test_lista_materiais_rejeita_topico_inexistente(
+    client: AsyncClient,
+) -> None:
+    response = await client.get(
+        URL,
+        params={"topico_id": str(uuid.uuid4())},
+        headers=headers(),
+    )
+
+    assert response.status_code == 404

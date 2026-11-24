@@ -22,6 +22,10 @@ Descricao = Annotated[
 ANO_LETIVO = re.compile(r"^(\d{4})/(\d{4})$")
 
 
+def descricao_vazia_fica_nula(value: str | None) -> str | None:
+    return value or None
+
+
 class MaterialCreate(BaseModel):
     """Metadados enviados com o ficheiro (formulário multipart)."""
 
@@ -38,6 +42,31 @@ class MaterialCreate(BaseModel):
     @classmethod
     def descricao_vazia_fica_nula(cls, value: str | None) -> str | None:
         return value or None
+
+    @field_validator("ano_letivo")
+    @classmethod
+    def ano_letivo_valido(cls, value: str | None) -> str | None:
+        if value is None or not value.strip():
+            return None
+        match = ANO_LETIVO.match(value.strip())
+        if not match or int(match.group(2)) != int(match.group(1)) + 1:
+            raise ValueError("Use the format YYYY/YYYY with consecutive years, e.g. 2026/2027.")
+        return match.group(0)
+
+
+class MaterialUpdate(BaseModel):
+    """Campos opcionais para corrigir os metadados de um material publicado."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    titulo: Titulo | None = None
+    descricao: Descricao | None = None
+    categoria: CategoriaMaterial | None = None
+    uc_id: uuid.UUID | None = None
+    topico_id: uuid.UUID | None = None
+    ano_letivo: str | None = None
+
+    _descricao = field_validator("descricao")(descricao_vazia_fica_nula)
 
     @field_validator("ano_letivo")
     @classmethod
