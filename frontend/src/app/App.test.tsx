@@ -1,14 +1,20 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { App } from './App'
 
 describe('App', () => {
-  it('shows the ApontaUA welcome content', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('shows the ApontaUA heading and the degree programme page', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('[]', { status: 200 })))
+
     render(<App />)
 
     expect(screen.getByRole('heading', { name: 'ApontaUA' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Frontend inicial' })).toBeInTheDocument()
-    expect(screen.getByText(/estrutura React está pronta/i)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Cursos' })).toBeInTheDocument()
+    expect(await screen.findByText('Ainda não há cursos registados.')).toBeInTheDocument()
   })
 })

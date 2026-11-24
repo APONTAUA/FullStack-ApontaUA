@@ -19,5 +19,5 @@ COPY --chown=10001:10001 backend ./backend
 USER 10001:10001
 
 EXPOSE 8000
-CMD ["/app/.venv/bin/python", "-m", "uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["/app/.venv/bin/python", "-m", "uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
 

@@ -1,21 +1,24 @@
 """Verificação provisória de papéis.
 
 A autenticação institucional (EPIC-01) e a gestão de papéis (EPIC-02) ainda não existem.
-Até lá, em `development` e `test`, o papel é indicado no cabeçalho `X-Dev-Role`, apenas
-para desenvolvimento local. Noutros ambientes, todos os pedidos são recusados, para que
-nenhuma rota protegida fique aberta por engano.
+Até lá, o papel é indicado no cabeçalho `X-Dev-Role`, apenas para desenvolvimento local.
+O cabeçalho só é aceite quando `APP_ENV` está definido explicitamente como `development`
+ou `test`. Se `APP_ENV` faltar (o valor por omissão em `config.py` é `development`) ou
+tiver outro valor, todos os pedidos são recusados, para que um deploy mal configurado
+não deixe as rotas protegidas abertas.
 
 Quando a autenticação existir, basta substituir `get_current_role` pela leitura do
 utilizador autenticado e dos seus papéis; as rotas continuam a usar as mesmas dependências.
 """
 
+import uuid
 from collections.abc import Awaitable, Callable
 from enum import StrEnum
 from typing import Annotated
 
 from fastapi import Depends, Header, HTTPException, status
 
-from backend.app.core.config import settings
+from backend.app.core.config import Settings, settings
 
 
 class Papel(StrEnum):
@@ -29,10 +32,15 @@ class Papel(StrEnum):
 DEV_ROLE_HEADER = "X-Dev-Role"
 
 
+def dev_roles_enabled(current: Settings) -> bool:
+    """O papel simulado só vale com APP_ENV explícito e de desenvolvimento ou teste."""
+    return "app_env" in current.model_fields_set and current.app_env in {"development", "test"}
+
+
 async def get_current_role(
     x_dev_role: Annotated[str | None, Header(alias=DEV_ROLE_HEADER)] = None,
 ) -> Papel:
-    if settings.app_env not in {"development", "test"}:
+    if not dev_roles_enabled(settings):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication is not configured yet.",
@@ -52,6 +60,39 @@ async def get_current_role(
 
 
 CurrentRole = Annotated[Papel, Depends(get_current_role)]
+
+DEV_USER_HEADER = "X-Dev-User-Id"
+
+
+async def get_current_user_id(
+    x_dev_user_id: Annotated[str | None, Header(alias=DEV_USER_HEADER)] = None,
+) -> uuid.UUID:
+    """Identificador interno provisório do utilizador (RN-048, US-007).
+
+    Até existir a conta interna (EPIC-01), o UUID vem do cabeçalho `X-Dev-User-Id`, com as
+    mesmas regras do papel simulado. Quando houver login, esta função passa a devolver o
+    identificador interno do utilizador autenticado.
+    """
+    if not dev_roles_enabled(settings):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication is not configured yet.",
+        )
+    if x_dev_user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Missing {DEV_USER_HEADER} header (development only).",
+        )
+    try:
+        return uuid.UUID(x_dev_user_id.strip())
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid UUID in {DEV_USER_HEADER} header.",
+        ) from None
+
+
+CurrentUserId = Annotated[uuid.UUID, Depends(get_current_user_id)]
 
 
 def require_roles(*allowed: Papel) -> Callable[[Papel], Awaitable[Papel]]:
