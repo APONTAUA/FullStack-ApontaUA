@@ -9,6 +9,7 @@ from backend.app.modules.reputation.service import (
     calcular_qualidade,
     calcular_reputacao,
     calcular_utilidade,
+    detalhar_reputacao,
 )
 
 
@@ -185,3 +186,47 @@ def test_criterios_rejeitam_valores_nao_finitos(invalido):
         calcular_melhoria_continua(invalido)
     with pytest.raises(ValueError):
         calcular_fiabilidade(invalido)
+
+
+def test_detalhe_mostra_a_contribuicao_de_cada_criterio():
+    """Cada critério contribui com o seu valor vezes o peso (US-053)."""
+    detalhe = detalhar_reputacao(
+        qualidade=66.667, utilidade=60, colaboracao=20, melhoria_continua=20, fiabilidade=100
+    )
+
+    contribuicoes = [criterio.contribuicao for criterio in detalhe.criterios]
+    assert contribuicoes == pytest.approx([20, 12, 3, 4, 15], abs=0.001)
+    assert detalhe.total == pytest.approx(54, abs=0.001)
+
+
+def test_detalhe_mantem_a_ordem_dos_criterios():
+    """Os critérios aparecem sempre pela mesma ordem, para a interface ser consistente."""
+    detalhe = detalhar_reputacao(
+        qualidade=0, utilidade=0, colaboracao=0, melhoria_continua=0, fiabilidade=0
+    )
+
+    nomes = [criterio.nome for criterio in detalhe.criterios]
+    assert nomes == ["qualidade", "utilidade", "colaboracao", "melhoria_continua", "fiabilidade"]
+
+
+@pytest.mark.parametrize(
+    "valores",
+    [(0, 0, 0, 0, 0), (100, 100, 100, 100, 100), (80, 50, 40, 60, 100), (13, 77, 5, 91, 42)],
+)
+def test_soma_das_contribuicoes_e_igual_ao_total(valores):
+    """A explicação bate sempre certo com o total (US-053)."""
+    q, u, c, m, f = valores
+    detalhe = detalhar_reputacao(
+        qualidade=q, utilidade=u, colaboracao=c, melhoria_continua=m, fiabilidade=f
+    )
+
+    soma = sum(criterio.contribuicao for criterio in detalhe.criterios)
+    assert soma == pytest.approx(detalhe.total)
+
+
+def test_detalhe_rejeita_criterio_fora_da_escala():
+    """Os mesmos limites do cálculo global aplicam-se ao detalhe."""
+    with pytest.raises(ValueError):
+        detalhar_reputacao(
+            qualidade=120, utilidade=0, colaboracao=0, melhoria_continua=0, fiabilidade=0
+        )

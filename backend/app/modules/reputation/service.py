@@ -1,6 +1,7 @@
 """Cálculo da reputação dos utilizadores (US-051)."""
 
 import math
+from dataclasses import dataclass
 
 # Valores iniciais, a recalibrar com os dados do piloto (ver docs/reputation/formulas.md).
 ESTRELAS_MINIMO = 1
@@ -98,7 +99,7 @@ def calcular_colaboracao(comentarios_uteis: int, sugestoes_uteis: int) -> float:
 
 def calcular_melhoria_continua(sugestoes_incorporadas: int) -> float:
     """Calcula a melhoria contínua (0 a 100) a partir das sugestões incorporadas (RN-105)."""
-    _validar_finitos(sugestoes_incorporadas)  # novo
+    _validar_finitos(sugestoes_incorporadas)
     return _normalizar(sugestoes_incorporadas, SUGESTOES_DE_REFERENCIA)
 
 
@@ -108,3 +109,52 @@ def calcular_fiabilidade(infracoes_confirmadas: int) -> float:
     if infracoes_confirmadas < 0:
         raise ValueError("O número de infrações não pode ser negativo.")
     return max(100 - PENALIZACAO_POR_INFRACAO * infracoes_confirmadas, 0)
+
+
+@dataclass(frozen=True)
+class ContribuicaoCriterio:
+    """Valor de um critério e quanto ele pesa na reputação global."""
+
+    nome: str
+    valor: float
+    peso: float
+    contribuicao: float
+
+
+@dataclass(frozen=True)
+class ReputacaoDetalhada:
+    """Reputação global com a contribuição de cada critério (US-053)."""
+
+    total: float
+    criterios: tuple[ContribuicaoCriterio, ...]
+
+
+def detalhar_reputacao(
+    qualidade: float,
+    utilidade: float,
+    colaboracao: float,
+    melhoria_continua: float,
+    fiabilidade: float,
+) -> ReputacaoDetalhada:
+    """Calcula a reputação e explica quanto cada critério contribui (RN-109)."""
+    total = calcular_reputacao(
+        qualidade=qualidade,
+        utilidade=utilidade,
+        colaboracao=colaboracao,
+        melhoria_continua=melhoria_continua,
+        fiabilidade=fiabilidade,
+    )
+
+    entradas = [
+        ("qualidade", qualidade, PESO_QUALIDADE),
+        ("utilidade", utilidade, PESO_UTILIDADE),
+        ("colaboracao", colaboracao, PESO_COLABORACAO),
+        ("melhoria_continua", melhoria_continua, PESO_MELHORIA_CONTINUA),
+        ("fiabilidade", fiabilidade, PESO_FIABILIDADE),
+    ]
+    criterios = tuple(
+        ContribuicaoCriterio(nome=nome, valor=valor, peso=peso, contribuicao=valor * peso)
+        for nome, valor, peso in entradas
+    )
+
+    return ReputacaoDetalhada(total=total, criterios=criterios)
