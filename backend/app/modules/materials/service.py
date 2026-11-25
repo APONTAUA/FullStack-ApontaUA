@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.core.permissions import Papel
-from backend.app.modules.academic.models import UnidadeCurricular
+from backend.app.modules.academic.models import AnoLetivo, UnidadeCurricular
 from backend.app.modules.academic.topicos.models import Topico
 from backend.app.modules.materials.formats import nome_seguro, tipo_do_ficheiro
 from backend.app.modules.materials.models import (
@@ -46,6 +46,10 @@ class TopicoNaoEncontrado(Exception):
 
 
 class TopicoForaDaUnidadeCurricular(Exception):
+    pass
+
+
+class AnoLetivoNaoEncontrado(Exception):
     pass
 
 
@@ -94,6 +98,26 @@ async def _validar_associacao(
         raise TopicoForaDaUnidadeCurricular
 
 
+async def _obter_ano_letivo_id(
+    session: AsyncSession, ano_letivo: str | None
+) -> uuid.UUID | None:
+    if ano_letivo is None:
+        return None
+
+    ano_inicio = int(ano_letivo.split("/")[0])
+    ano_id = await session.scalar(
+        select(AnoLetivo.id).where(
+            AnoLetivo.ano_inicio == ano_inicio,
+            AnoLetivo.ano_fim == ano_inicio + 1,
+        )
+    )
+
+    if ano_id is None:
+        raise AnoLetivoNaoEncontrado
+
+    return ano_id
+
+
 async def _ler_ficheiro(ficheiro: UploadFile, max_bytes: int) -> tuple[io.BytesIO, int, str]:
     """Lê o ficheiro por partes, sem passar do limite, e calcula o SHA-256 (RN-064)."""
     buffer = io.BytesIO()
@@ -121,6 +145,7 @@ async def publicar_material(
 ) -> Publicacao:
     """Publica um material da comunidade, sem aprovação prévia (US-022, RN-023)."""
     await _validar_associacao(session, dados.uc_id, dados.topico_id)
+    ano_letivo_id = await _obter_ano_letivo_id(session, dados.ano_letivo)
 
     nome = nome_seguro(ficheiro.filename)
     tipo = tipo_do_ficheiro(nome) if nome else None
@@ -148,6 +173,7 @@ async def publicar_material(
             categoria=dados.categoria,
             origem=OrigemMaterial.COMUNIDADE,  # Critério 6 (RN-054)
             ano_letivo=dados.ano_letivo,
+            ano_letivo_id=ano_letivo_id,
             topico_id=dados.topico_id,
             autor_id=autor_id,  # Critério 4 (RN-048)
         )

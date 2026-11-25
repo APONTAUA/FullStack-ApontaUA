@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from backend.app.core.config import settings
 from backend.app.core.database import get_db_session
 from backend.app.main import app
-from backend.app.modules.academic.models import UnidadeCurricular
+from backend.app.modules.academic.models import AnoLetivo, UnidadeCurricular
 from backend.app.modules.academic.topicos.models import Topico
 from backend.app.modules.materials.models import Material, VersaoMaterial
 from backend.app.modules.materials.router import get_armazenamento
@@ -102,6 +102,10 @@ async def test_publica_material(
     estrutura,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
+    async with session_factory() as session:
+        session.add(AnoLetivo(ano_inicio=2026, ano_fim=2027))
+        await session.commit()
+
     antes = datetime.now(UTC) - timedelta(seconds=5)
     response = await publicar(
         client,
@@ -321,6 +325,33 @@ async def test_topico_com_materiais_nao_pode_ser_apagado(
         f"/api/v1/topicos/{estrutura['topico']}", headers=headers("administrador")
     )
     assert response.status_code == 409
+
+
+# US-018 — Não publicar materiais associados a anos letivos inexistentes.
+async def test_rejeita_material_com_ano_letivo_inexistente(
+    client: AsyncClient,
+    storage: FakeStorage,
+    estrutura,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    response = await publicar(
+        client,
+        estrutura,
+        ano_letivo="2098/2099",
+    )
+
+    assert response.status_code == 404, response.text
+    assert response.json()["detail"] == "Academic year not found."
+
+    # O ficheiro não deve ser enviado para o armazenamento.
+    assert storage.uploads == {}
+
+    # O material não deve ser guardado na base de dados.
+    async with session_factory() as session:
+        total = await session.scalar(
+            select(func.count()).select_from(Material)
+        )
+        assert total == 0
 
 
 # --- US-020 — associação académica das notas de estudo ---

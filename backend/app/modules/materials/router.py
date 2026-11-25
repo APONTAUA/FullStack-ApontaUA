@@ -50,6 +50,10 @@ FORMATOS = ", ".join(sorted(ext.lstrip(".") for ext in TIPOS_POR_EXTENSAO))
 ERROS = {
     service.UnidadeCurricularNaoEncontrada: (status.HTTP_404_NOT_FOUND, "Course unit not found."),
     service.TopicoNaoEncontrado: (status.HTTP_404_NOT_FOUND, "Topic not found."),
+    service.AnoLetivoNaoEncontrado: (
+        status.HTTP_404_NOT_FOUND,
+        "Academic year not found.",
+    ),
     service.TopicoForaDaUnidadeCurricular: (
         status.HTTP_422_UNPROCESSABLE_CONTENT,
         "The topic does not belong to the selected course unit.",
