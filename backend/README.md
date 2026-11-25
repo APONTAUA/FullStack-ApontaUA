@@ -59,6 +59,10 @@ e o ficheiro em `ficheiro`. Aceita PDF, MD, DOC/DOCX, XLS/XLSX, PPT/PPTX, JPEG e
 `MAX_UPLOAD_SIZE_MB`. O ficheiro vai para o MinIO e a publicação cria o material e a sua
 versão 1.
 
+`PATCH /api/v1/materiais/{id}/associacao` muda a UC e o tópico de um material
+(`{"uc_id": ..., "topico_id": ...}`), com as mesmas validações da publicação. Só o autor
+ou um administrador o podem fazer; as versões e o ficheiro não mudam.
+
 ## Persistência e integrações
 
 PostgreSQL é a fonte de verdade. Ficheiros originais são guardados no caminho

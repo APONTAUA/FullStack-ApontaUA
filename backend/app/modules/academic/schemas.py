@@ -40,6 +40,7 @@ class UnidadeCurricularCreate(BaseModel):
 
     codigo: Codigo
     nome: Nome
+    curso_id: uuid.UUID | None = None
 
 
 class UnidadeCurricularUpdate(BaseModel):
@@ -47,6 +48,7 @@ class UnidadeCurricularUpdate(BaseModel):
 
     codigo: Codigo = None
     nome: Nome = None
+    curso_id: uuid.UUID | None = None
 
 
 class UnidadeCurricularRead(BaseModel):
@@ -55,6 +57,7 @@ class UnidadeCurricularRead(BaseModel):
     id: uuid.UUID
     codigo: str
     nome: str
+    curso_id: uuid.UUID | None
 
 # US-018 — Gestão de anos letivos e semestres
 
