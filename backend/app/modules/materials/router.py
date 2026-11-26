@@ -11,6 +11,7 @@ from backend.app.modules.materials import service
 from backend.app.modules.materials.formats import TIPOS_POR_EXTENSAO
 from backend.app.modules.materials.models import CategoriaMaterial
 from backend.app.modules.materials.schemas import (
+    AssociacaoUpdate,
     FicheiroRead,
     MaterialCreate,
     MaterialRead,
@@ -138,6 +139,10 @@ async def publicar(
         codigo, mensagem = ERROS[type(erro)]
         raise HTTPException(status_code=codigo, detail=mensagem) from None
 
+    return _para_leitura(publicacao)
+
+
+def _para_leitura(publicacao: service.Publicacao) -> MaterialRead:
     material, versao, guardado = publicacao.material, publicacao.versao, publicacao.ficheiro
     return MaterialRead(
         id=material.id,
@@ -162,3 +167,38 @@ async def publicar(
             ),
         ),
     )
+
+
+ERROS_ASSOCIACAO = {
+    service.MaterialNaoEncontrado: (status.HTTP_404_NOT_FOUND, "Material not found."),
+    service.MaterialRemovido: (status.HTTP_409_CONFLICT, "The material has been removed."),
+    service.SemPermissao: (
+        status.HTTP_403_FORBIDDEN,
+        "Only the author or an administrator can change this material.",
+    ),
+    service.UnidadeCurricularNaoEncontrada: ERROS[service.UnidadeCurricularNaoEncontrada],
+    service.TopicoNaoEncontrado: ERROS[service.TopicoNaoEncontrado],
+    service.TopicoForaDaUnidadeCurricular: ERROS[service.TopicoForaDaUnidadeCurricular],
+}
+
+
+@router.patch(
+    "/{material_id}/associacao",
+    response_model=MaterialRead,
+    summary="Muda a unidade curricular e o tópico de um material",
+)
+async def alterar_associacao(
+    material_id: uuid.UUID,
+    dados: AssociacaoUpdate,
+    papel: CurrentRole,
+    utilizador_id: CurrentUserId,
+    session: Session,
+) -> MaterialRead:
+    try:
+        publicacao = await service.alterar_associacao(
+            session, material_id, dados, utilizador_id, papel
+        )
+    except tuple(ERROS_ASSOCIACAO) as erro:
+        codigo, mensagem = ERROS_ASSOCIACAO[type(erro)]
+        raise HTTPException(status_code=codigo, detail=mensagem) from None
+    return _para_leitura(publicacao)

@@ -50,6 +50,15 @@ class MaterialCreate(BaseModel):
         return match.group(0)
 
 
+class AssociacaoUpdate(BaseModel):
+    """Nova UC e novo tópico de um material (US-020). Os dois são obrigatórios."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    uc_id: uuid.UUID
+    topico_id: uuid.UUID
+
+
 class FicheiroRead(BaseModel):
     nome_original: str
     tipo: str

@@ -1,11 +1,20 @@
 import { useState } from 'react'
 
 import { CursosAdminPage } from '../features/academic-structure/CursosAdminPage'
-import { MaterialsSearchPage } from '../features/materials/MaterialsSearchPage'
+import { TopicosAdminPage } from '../features/academic-structure/TopicosAdminPage'
 import { DEV_ROLES, getDevRole, setDevRole, type DevRole } from '../services/api/client'
+
+type Secao = 'cursos' | 'topicos'
+
+const SECOES: { id: Secao; label: string }[] = [
+  { id: 'cursos', label: 'Cursos' },
+  { id: 'topicos', label: 'Tópicos' },
+]
 
 export function App() {
   const [role, setRole] = useState<DevRole>(getDevRole())
+  const [secao, setSecao] = useState<Secao>('cursos')
+  const canManage = role === 'administrador'
 
   function changeRole(next: DevRole) {
     setDevRole(next)
@@ -32,9 +41,29 @@ export function App() {
         </aside>
       )}
 
-      {/* A key obriga a recarregar a lista com o novo papel. */}
-      <CursosAdminPage key={role} canManage={role === 'administrador'} />
-      <MaterialsSearchPage />
+      <nav aria-label="Estrutura académica" className="section-nav">
+        <ul>
+          {SECOES.map((item) => (
+            <li key={item.id}>
+              <button
+                type="button"
+                className="button"
+                aria-current={secao === item.id ? 'page' : undefined}
+                onClick={() => setSecao(item.id)}
+              >
+                {item.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      {/* A key obriga a recarregar os dados com o novo papel. */}
+      {secao === 'cursos' ? (
+        <CursosAdminPage key={role} canManage={canManage} />
+      ) : (
+        <TopicosAdminPage key={role} canManage={canManage} />
+      )}
     </main>
   )
 }

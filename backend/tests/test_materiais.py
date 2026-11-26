@@ -371,3 +371,153 @@ async def test_topico_com_materiais_nao_pode_ser_apagado(
         f"/api/v1/topicos/{estrutura['topico']}", headers=headers("administrador")
     )
     assert response.status_code == 409
+
+
+# --- US-020 — associação académica das notas de estudo ---
+
+
+@pytest.fixture
+async def material(client: AsyncClient, storage: FakeStorage, estrutura) -> dict:
+    response = await publicar(client, estrutura)
+    assert response.status_code == 201
+    return response.json()
+
+
+@pytest.fixture
+async def outro_topico(session_factory: async_sessionmaker[AsyncSession], estrutura) -> uuid.UUID:
+    async with session_factory() as session:
+        topico = Topico(uc_id=estrutura["uc"], nome="Arquitetura", ordem=1)
+        session.add(topico)
+        await session.commit()
+        return topico.id
+
+
+def associacao_url(material: dict) -> str:
+    return f"{URL}/{material['id']}/associacao"
+
+
+# Critérios 5 e 6: a nota herda a UC do tópico e a associação continua válida após a alteração.
+async def test_autor_muda_o_topico(
+    client: AsyncClient, material: dict, estrutura, outro_topico: uuid.UUID
+) -> None:
+    response = await client.patch(
+        associacao_url(material),
+        json={"uc_id": str(estrutura["uc"]), "topico_id": str(outro_topico)},
+        headers=headers(),
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["topico_id"] == str(outro_topico)
+    assert body["uc_id"] == str(estrutura["uc"])
+    assert body["versao_atual"] == material["versao_atual"]
+    assert body["autor_id"] == material["autor_id"]
+
+
+async def test_muda_para_topico_de_outra_uc(client: AsyncClient, material: dict, estrutura) -> None:
+    response = await client.patch(
+        associacao_url(material),
+        json={"uc_id": str(estrutura["outra_uc"]), "topico_id": str(estrutura["topico_outra"])},
+        headers=headers(),
+    )
+    assert response.status_code == 200
+    assert response.json()["uc_id"] == str(estrutura["outra_uc"])
+
+
+# Critérios 3, 4 e 7: recusar ligações inválidas e manter a associação anterior.
+@pytest.mark.parametrize(
+    ("campo", "codigo"),
+    [("uc_inexistente", 404), ("topico_inexistente", 404), ("topico_de_outra_uc", 422)],
+)
+async def test_recusa_associacao_invalida(
+    client: AsyncClient,
+    material: dict,
+    estrutura,
+    session_factory: async_sessionmaker[AsyncSession],
+    campo: str,
+    codigo: int,
+) -> None:
+    dados = {
+        "uc_inexistente": {"uc_id": str(uuid.uuid4()), "topico_id": str(estrutura["topico"])},
+        "topico_inexistente": {"uc_id": str(estrutura["uc"]), "topico_id": str(uuid.uuid4())},
+        "topico_de_outra_uc": {
+            "uc_id": str(estrutura["uc"]),
+            "topico_id": str(estrutura["topico_outra"]),
+        },
+    }[campo]
+    response = await client.patch(associacao_url(material), json=dados, headers=headers())
+    assert response.status_code == codigo
+
+    async with session_factory() as session:
+        guardado = await session.get(Material, uuid.UUID(material["id"]))
+        assert guardado.topico_id == estrutura["topico"]
+
+
+@pytest.mark.parametrize(
+    "dados", [{}, {"uc_id": "x", "topico_id": "y"}, {"topico_id": None}, {"extra": 1}]
+)
+async def test_recusa_dados_incompletos(client: AsyncClient, material: dict, dados: dict) -> None:
+    response = await client.patch(associacao_url(material), json=dados, headers=headers())
+    assert response.status_code == 422
+
+
+async def test_material_inexistente(client: AsyncClient, estrutura) -> None:
+    response = await client.patch(
+        f"{URL}/{uuid.uuid4()}/associacao",
+        json={"uc_id": str(estrutura["uc"]), "topico_id": str(estrutura["topico"])},
+        headers=headers(),
+    )
+    assert response.status_code == 404
+
+
+async def test_outro_utilizador_nao_pode_mudar(
+    client: AsyncClient, material: dict, estrutura, outro_topico: uuid.UUID
+) -> None:
+    response = await client.patch(
+        associacao_url(material),
+        json={"uc_id": str(estrutura["uc"]), "topico_id": str(outro_topico)},
+        headers=headers("docente", autor=uuid.uuid4()),
+    )
+    assert response.status_code == 403
+
+
+async def test_administrador_pode_mudar(
+    client: AsyncClient, material: dict, estrutura, outro_topico: uuid.UUID
+) -> None:
+    response = await client.patch(
+        associacao_url(material),
+        json={"uc_id": str(estrutura["uc"]), "topico_id": str(outro_topico)},
+        headers=headers("administrador", autor=uuid.uuid4()),
+    )
+    assert response.status_code == 200
+
+
+async def test_material_removido_nao_muda(
+    client: AsyncClient,
+    material: dict,
+    estrutura,
+    outro_topico: uuid.UUID,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    from backend.app.modules.materials.models import EstadoMaterial
+
+    async with session_factory() as session:
+        guardado = await session.get(Material, uuid.UUID(material["id"]))
+        guardado.estado = EstadoMaterial.REMOVIDO
+        await session.commit()
+    response = await client.patch(
+        associacao_url(material),
+        json={"uc_id": str(estrutura["uc"]), "topico_id": str(outro_topico)},
+        headers=headers(),
+    )
+    assert response.status_code == 409
+
+
+async def test_associacao_sem_autor_devolve_401(
+    client: AsyncClient, material: dict, estrutura
+) -> None:
+    response = await client.patch(
+        associacao_url(material),
+        json={"uc_id": str(estrutura["uc"]), "topico_id": str(estrutura["topico"])},
+        headers=headers(autor=None),
+    )
+    assert response.status_code == 401

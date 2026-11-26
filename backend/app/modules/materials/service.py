@@ -6,20 +6,20 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from fastapi import UploadFile
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.app.core.permissions import Papel
 from backend.app.modules.academic.models import UnidadeCurricular
 from backend.app.modules.academic.topicos.models import Topico
 from backend.app.modules.materials.formats import nome_seguro, tipo_do_ficheiro
 from backend.app.modules.materials.models import (
-    CategoriaMaterial,
     EstadoMaterial,
     Material,
     OrigemMaterial,
     VersaoMaterial,
 )
-from backend.app.modules.materials.schemas import MaterialCreate
+from backend.app.modules.materials.schemas import AssociacaoUpdate, MaterialCreate
 from backend.app.modules.storage.models import StoredFile
 
 logger = logging.getLogger(__name__)
@@ -61,6 +61,18 @@ class FicheiroDemasiadoGrande(Exception):
     pass
 
 
+class MaterialNaoEncontrado(Exception):
+    pass
+
+
+class MaterialRemovido(Exception):
+    pass
+
+
+class SemPermissao(Exception):
+    pass
+
+
 @dataclass(frozen=True)
 class Publicacao:
     material: Material
@@ -69,58 +81,16 @@ class Publicacao:
     uc_id: uuid.UUID
 
 
-async def pesquisar_materiais(
-    session: AsyncSession,
-    *,
-    termo: str | None = None,
-    categoria: CategoriaMaterial | None = None,
-    topico_id: uuid.UUID | None = None,
-) -> list[tuple[Material, uuid.UUID, VersaoMaterial, StoredFile]]:
-    """Pesquisa materiais publicados, aplicando em conjunto os critérios recebidos."""
-    versao_atual = (
-        select(
-            VersaoMaterial.material_id.label("material_id"),
-            func.max(VersaoMaterial.numero).label("numero"),
-        )
-        .group_by(VersaoMaterial.material_id)
-        .subquery()
-    )
-    consulta = (
-        select(Material, Topico.uc_id, VersaoMaterial, StoredFile)
-        .join(Topico, Material.topico_id == Topico.id)
-        .join(versao_atual, versao_atual.c.material_id == Material.id)
-        .join(
-            VersaoMaterial,
-            (VersaoMaterial.material_id == Material.id)
-            & (VersaoMaterial.numero == versao_atual.c.numero),
-        )
-        .join(StoredFile, VersaoMaterial.ficheiro_id == StoredFile.id)
-        .where(Material.estado == EstadoMaterial.PUBLICADO)
-    )
-
-    if termo:
-        termo_literal = termo.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-        consulta = consulta.where(
-            Material.titulo.ilike(f"%{termo_literal}%", escape="\\")
-            | Material.descricao.ilike(f"%{termo_literal}%", escape="\\")
-        )
-    if categoria is not None:
-        consulta = consulta.where(Material.categoria == categoria)
-    if topico_id is not None:
-        consulta = consulta.where(Material.topico_id == topico_id)
-
-    consulta = consulta.order_by(Material.publicado_em.desc(), Material.id)
-    return list((await session.execute(consulta)).all())
-
-
-async def _validar_associacao(session: AsyncSession, dados: MaterialCreate) -> None:
-    """Critérios 2 e 3: a UC e o tópico existem e o tópico pertence a essa UC (RN-047)."""
-    if await session.get(UnidadeCurricular, dados.uc_id) is None:
+async def _validar_associacao(
+    session: AsyncSession, uc_id: uuid.UUID, topico_id: uuid.UUID
+) -> None:
+    """A UC e o tópico existem e o tópico pertence a essa UC (RN-047, RN-036, US-020)."""
+    if await session.get(UnidadeCurricular, uc_id) is None:
         raise UnidadeCurricularNaoEncontrada
-    topico = await session.get(Topico, dados.topico_id)
+    topico = await session.get(Topico, topico_id)
     if topico is None:
         raise TopicoNaoEncontrado
-    if topico.uc_id != dados.uc_id:
+    if topico.uc_id != uc_id:
         raise TopicoForaDaUnidadeCurricular
 
 
@@ -150,7 +120,7 @@ async def publicar_material(
     max_bytes: int,
 ) -> Publicacao:
     """Publica um material da comunidade, sem aprovação prévia (US-022, RN-023)."""
-    await _validar_associacao(session, dados)
+    await _validar_associacao(session, dados.uc_id, dados.topico_id)
 
     nome = nome_seguro(ficheiro.filename)
     tipo = tipo_do_ficheiro(nome) if nome else None
@@ -198,3 +168,48 @@ async def publicar_material(
     for objeto in (guardado, material, versao):
         await session.refresh(objeto)
     return Publicacao(material=material, versao=versao, ficheiro=guardado, uc_id=dados.uc_id)
+
+
+async def _versao_atual(
+    session: AsyncSession, material_id: uuid.UUID
+) -> tuple[VersaoMaterial, StoredFile]:
+    versao = await session.scalar(
+        select(VersaoMaterial)
+        .where(VersaoMaterial.material_id == material_id)
+        .order_by(VersaoMaterial.numero.desc())
+        .limit(1)
+    )
+    if versao is None:  # Não deve acontecer: a publicação cria sempre a versão 1.
+        raise MaterialNaoEncontrado
+    ficheiro = await session.get(StoredFile, versao.ficheiro_id)
+    if ficheiro is None:
+        raise MaterialNaoEncontrado
+    return versao, ficheiro
+
+
+async def alterar_associacao(
+    session: AsyncSession,
+    material_id: uuid.UUID,
+    dados: AssociacaoUpdate,
+    utilizador_id: uuid.UUID,
+    papel: Papel,
+) -> Publicacao:
+    """Muda a UC e o tópico de um material, mantendo as associações válidas (US-020, critério 6).
+
+    Só o autor ou um administrador podem mudar a associação. As versões e o ficheiro não mudam.
+    """
+    material = await session.get(Material, material_id)
+    if material is None:
+        raise MaterialNaoEncontrado
+    if material.estado == EstadoMaterial.REMOVIDO:
+        raise MaterialRemovido
+    if papel != Papel.ADMINISTRADOR and material.autor_id != utilizador_id:
+        raise SemPermissao
+
+    await _validar_associacao(session, dados.uc_id, dados.topico_id)
+    material.topico_id = dados.topico_id
+    await session.commit()
+    await session.refresh(material)
+
+    versao, ficheiro = await _versao_atual(session, material.id)
+    return Publicacao(material=material, versao=versao, ficheiro=ficheiro, uc_id=dados.uc_id)
