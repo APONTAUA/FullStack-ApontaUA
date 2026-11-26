@@ -296,6 +296,56 @@ async def test_armazenamento_nao_configurado_devolve_503(client: AsyncClient, es
     assert response.status_code == 503
 
 
+async def test_pesquisa_filtra_por_categoria_e_palavra_chave(
+    client: AsyncClient, storage: FakeStorage, estrutura
+) -> None:
+    await publicar(client, estrutura, titulo="Resumo de cálculo", categoria="apontamentos")
+    await publicar(client, estrutura, titulo="Exame de cálculo", categoria="exame")
+    await publicar(client, estrutura, titulo="Resumo de álgebra", categoria="apontamentos")
+
+    response = await client.get(
+        URL,
+        params={"categoria": "apontamentos", "q": "cálculo"},
+        headers=headers(),
+    )
+
+    assert response.status_code == 200, response.text
+    materiais = response.json()
+    assert len(materiais) == 1
+    assert materiais[0]["titulo"] == "Resumo de cálculo"
+    assert materiais[0]["categoria"] == "apontamentos"
+    assert materiais[0]["uc_id"] == str(estrutura["uc"])
+    assert materiais[0]["versao_atual"]["ficheiro"]["nome_original"] == "resumo.pdf"
+
+
+async def test_pesquisa_sem_categoria_e_filtragem_opcional_por_topico(
+    client: AsyncClient, storage: FakeStorage, estrutura
+) -> None:
+    await publicar(client, estrutura, titulo="Apontamentos", categoria="apontamentos")
+    await publicar(
+        client,
+        estrutura,
+        titulo="Exame",
+        categoria="exame",
+        topico_id=str(estrutura["topico_outra"]),
+        uc_id=str(estrutura["outra_uc"]),
+    )
+
+    response = await client.get(
+        URL,
+        params={"topico_id": str(estrutura["topico"])},
+        headers=headers(),
+    )
+
+    assert response.status_code == 200
+    assert [material["titulo"] for material in response.json()] == ["Apontamentos"]
+
+
+async def test_pesquisa_exige_utilizador_autenticado(client: AsyncClient) -> None:
+    response = await client.get(URL)
+    assert response.status_code == 401
+
+
 # Autor provisório: só com X-Dev-User-Id válido.
 @pytest.mark.parametrize("autor", [None, "nao-e-uuid"])
 async def test_autor_obrigatorio(
